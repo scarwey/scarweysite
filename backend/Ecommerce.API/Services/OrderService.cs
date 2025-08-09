@@ -18,12 +18,14 @@ namespace ECommerce.API.Services
             _emailService = emailService;
         }
 
+        // OrderService.cs'deki GetUserOrdersAsync metodunu bu şekilde değiştirin:
+
         public async Task<IEnumerable<Order>> GetUserOrdersAsync(int userId)
         {
             try
             {
                 // ✅ NULL-SAFE THENINCLUDE (Satır 25 uyarıları düzeltildi)
-                return await _context.Orders
+                var orders = await _context.Orders
                     .Include(o => o.OrderItems!)
                         .ThenInclude(oi => oi.Product!)
                             .ThenInclude(p => p.Images!)
@@ -32,6 +34,19 @@ namespace ECommerce.API.Services
                     .Where(o => o.UserId == userId)
                     .OrderByDescending(o => o.OrderDate)
                     .ToListAsync();
+
+                // 🆕 YENİ: Her sipariş için aktif iade talebi kontrolü
+                foreach (var order in orders)
+                {
+                    var hasActiveRefund = await _context.RefundRequests
+                        .AnyAsync(rr => rr.OrderId == order.Id &&
+                                       (rr.Status == RefundStatus.Pending ||
+                                        rr.Status == RefundStatus.Approved));
+
+                    order.HasActiveRefundRequest = hasActiveRefund;
+                }
+
+                return orders;
             }
             catch (Exception ex)
             {

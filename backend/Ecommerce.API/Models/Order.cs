@@ -1,4 +1,5 @@
-﻿namespace ECommerce.API.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+namespace ECommerce.API.Models
 {
     public class Order : BaseEntity
     {
@@ -29,6 +30,8 @@
         public string? CancellationReason { get; set; }
         public DateTime? CancellationDate { get; set; }
         public int? CancelledByUserId { get; set; }
+        [NotMapped] // Database'e kaydetmiyoruz, sadece API response için
+        public bool HasActiveRefundRequest { get; set; }
 
         // Navigation Properties
         public virtual User? User { get; set; }

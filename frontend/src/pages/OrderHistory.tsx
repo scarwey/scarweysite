@@ -761,13 +761,23 @@ const OrderHistory: React.FC = () => {
 
                     {/* Refund Request Button - SHIPPED + DELIVERED */}
                     {(order.status === OrderStatus.Delivered || order.status === OrderStatus.Shipped) && (
-                      <button
-                        onClick={() => handleRefundRequest(order)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-                      >
-                        <FiRefreshCw size={16} />
-                        {order.status === OrderStatus.Shipped ? 'Kargo İade Et' : 'İade Talep Et'}
-                      </button>
+                      order.hasActiveRefundRequest ? (
+                        <button
+                          className="px-4 py-2 bg-gray-500 text-white rounded-lg cursor-not-allowed flex items-center gap-2"
+                          disabled
+                        >
+                          <FiCheck size={16} />
+                          İade Talep Edildi
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRefundRequest(order)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                        >
+                          <FiRefreshCw size={16} />
+                          {order.status === OrderStatus.Shipped ? 'Kargo İade Et' : 'İade Talep Et'}
+                        </button>
+                      )
                     )}
 
                     {/* Other existing buttons */}

@@ -19,6 +19,7 @@ const FiCheck = Icons.FiCheck as any;
 const FiDollarSign = Icons.FiDollarSign as any;
 const FiMapPin = Icons.FiMapPin as any;
 const FiPhone = Icons.FiPhone as any;
+const FiAlertTriangle = Icons.FiAlertTriangle as any; // 🆕 İade ikonu için
 
 interface Order {
   id: number;
@@ -34,6 +35,7 @@ interface Order {
   orderDate: string;
   shippingAddress: string;
   orderItems?: OrderItem[];
+  hasActiveRefundRequest?: boolean; // 🆕 YENİ EKLENEN
 }
 
 interface OrderItem {
@@ -154,6 +156,7 @@ const SellerOrderManagement: React.FC = () => {
       Shipped: { color: 'bg-purple-100 text-purple-800', text: 'Kargoda' },
       Delivered: { color: 'bg-green-100 text-green-800', text: 'Teslim Edildi' },
       Cancelled: { color: 'bg-red-100 text-red-800', text: 'İptal' },
+      Refunded: { color: 'bg-gray-100 text-gray-800', text: 'İade Edildi' }, // 🆕 YENİ EKLENEN
     };
 
     const statusInfo = statusMap[status] || { color: 'bg-gray-100 text-gray-800', text: status };
@@ -277,7 +280,7 @@ const SellerOrderManagement: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -325,6 +328,19 @@ const SellerOrderManagement: React.FC = () => {
             </div>
           </div>
         </div>
+        
+        {/* 🆕 YENİ KART: İade Talepleri */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">İade Talepleri</p>
+              <p className="text-2xl font-bold text-orange-600">{orders.filter(o => o.hasActiveRefundRequest).length}</p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+              <FiAlertTriangle className="text-orange-600" size={24} />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -354,6 +370,7 @@ const SellerOrderManagement: React.FC = () => {
               { value: 'Shipped', label: 'Kargoda', color: 'bg-purple-100 text-purple-700' },
               { value: 'Delivered', label: 'Teslim Edildi', color: 'bg-green-100 text-green-700' },
               { value: 'Cancelled', label: 'İptal', color: 'bg-red-100 text-red-700' },
+              { value: 'Refunded', label: 'İade Edildi', color: 'bg-gray-100 text-gray-700' }, // 🆕 YENİ EKLENEN
             ].map(filter => (
               <button
                 key={filter.value}
@@ -425,13 +442,25 @@ const SellerOrderManagement: React.FC = () => {
                   {orders.map((order) => (
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {order.orderNumber}
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {order.orderNumber}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              ID: {order.id}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {order.id}
-                          </div>
+                          {/* 🆕 YENİ: İade ikonu */}
+                          {order.hasActiveRefundRequest && (
+                            <div className="flex items-center">
+                              <FiAlertTriangle 
+                                className="text-orange-500" 
+                                size={16} 
+                                title="Bu siparişte aktif iade talebi var"
+                              />
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -460,7 +489,15 @@ const SellerOrderManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(order.status)}
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(order.status)}
+                          {/* 🆕 YENİ: İade durumu badge'i */}
+                          {order.hasActiveRefundRequest && (
+                            <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                              İade Talebi Var
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
@@ -541,9 +578,18 @@ const SellerOrderManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Sipariş Detayı - {selectedOrder.orderNumber}
-              </h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Sipariş Detayı - {selectedOrder.orderNumber}
+                </h3>
+                {/* 🆕 YENİ: Modal başlığında iade uyarısı */}
+                {selectedOrder.hasActiveRefundRequest && (
+                  <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800 flex items-center gap-1">
+                    <FiAlertTriangle size={12} />
+                    İade Talebi Var
+                  </span>
+                )}
+              </div>
               <button
                 onClick={closeOrderModal}
                 className="text-gray-400 hover:text-gray-600"
@@ -553,6 +599,17 @@ const SellerOrderManagement: React.FC = () => {
             </div>
 
             <div className="p-6">
+              {/* 🆕 YENİ: İade uyarı mesajı */}
+              {selectedOrder.hasActiveRefundRequest && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 flex items-center">
+                  <FiAlertTriangle className="text-orange-500 mr-3" />
+                  <div>
+                    <p className="text-orange-800 font-medium">İade Talebi Mevcut</p>
+                    <p className="text-orange-700 text-sm">Bu sipariş için aktif bir iade talebi bulunmaktadır. Detaylı bilgi için admin panelini kontrol edin.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Order Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>

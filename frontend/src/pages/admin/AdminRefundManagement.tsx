@@ -11,6 +11,7 @@ const FiCalendar = Icons.FiCalendar as any;
 const FiDollarSign = Icons.FiDollarSign as any;
 const FiEye = Icons.FiEye as any;
 const FiFilter = Icons.FiFilter as any;
+const FiPackage = Icons.FiPackage as any;
 
 // Types
 interface RefundRequest {
@@ -29,12 +30,249 @@ interface RefundRequest {
   adminNotes?: string;
 }
 
+// 🆕 YENİ: Detaylı iade talebi tipi
+interface RefundRequestDetail {
+  id: number;
+  orderId: number;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  status: string;
+  generalReason: string;
+  totalRefundAmount: number;
+  type: string;
+  requestDate: string;
+  processedBy?: string;
+  processedDate?: string;
+  adminNotes?: string;
+  refundItems: RefundItemDetail[];
+}
+
+interface RefundItemDetail {
+  id: number;
+  orderItemId: number;
+  productName: string;
+  productImage?: string;
+  size?: string;
+  quantity: number;
+  maxQuantity: number;
+  unitPrice: number;
+  refundAmount: number;
+  reason: string;
+}
+
 interface ProcessModalProps {
   isOpen: boolean;
   onClose: () => void;
   refundRequest: RefundRequest | null;
   onSuccess: () => void;
 }
+
+// 🆕 YENİ: Detay Modal
+interface DetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  refundRequestId: number | null;
+}
+
+// Detail Modal Component
+const DetailModal: React.FC<DetailModalProps> = ({
+  isOpen,
+  onClose,
+  refundRequestId
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [refundDetail, setRefundDetail] = useState<RefundRequestDetail | null>(null);
+
+  useEffect(() => {
+    if (isOpen && refundRequestId) {
+      fetchRefundDetail();
+    }
+  }, [isOpen, refundRequestId]);
+
+  const fetchRefundDetail = async () => {
+    if (!refundRequestId) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.get<RefundRequestDetail>(`/refund/admin/detail/${refundRequestId}`);
+      setRefundDetail(response.data);
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Detay bilgileri yüklenirken hata oluştu.');
+      console.error('Error fetching refund detail:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold">İade Talebi Detayları</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition"
+            >
+              <FiX size={24} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Detaylar yükleniyor...</p>
+            </div>
+          ) : refundDetail ? (
+            <div className="space-y-6">
+              {/* Genel Bilgiler */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-lg mb-4">Genel Bilgiler</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Sipariş No</label>
+                    <p className="font-semibold">#{refundDetail.orderNumber}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Müşteri</label>
+                    <p className="font-semibold">{refundDetail.customerName}</p>
+                    <p className="text-sm text-gray-600">{refundDetail.customerEmail}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Durum</label>
+                    <p className="font-semibold">{refundDetail.status}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Toplam İade Tutarı</label>
+                    <p className="font-semibold text-green-600">₺{refundDetail.totalRefundAmount.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">İade Türü</label>
+                    <p className="font-semibold">{refundDetail.type === 'Full' ? 'Tam İade' : 'Kısmi İade'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Tarih</label>
+                    <p className="font-semibold">{new Date(refundDetail.requestDate).toLocaleDateString('tr-TR')}</p>
+                  </div>
+                </div>
+                
+                {/* Genel Sebep */}
+                <div className="mt-4">
+                  <label className="text-sm font-medium text-gray-600">Genel İade Nedeni</label>
+                  <p className="text-gray-800 bg-white p-3 rounded border mt-1">{refundDetail.generalReason}</p>
+                </div>
+
+                {/* Admin Notları */}
+                {refundDetail.adminNotes && (
+                  <div className="mt-4">
+                    <label className="text-sm font-medium text-gray-600">Admin Notları</label>
+                    <p className="text-gray-800 bg-white p-3 rounded border mt-1">{refundDetail.adminNotes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* İade Edilen Ürünler */}
+              <div>
+                <h4 className="font-semibold text-lg mb-4">İade Edilen Ürünler ({refundDetail.refundItems.length})</h4>
+                <div className="space-y-4">
+                  {refundDetail.refundItems.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-4">
+                      <div className="flex items-start gap-4">
+                        {/* Product Image */}
+                        <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                          {item.productImage ? (
+                            <img
+                              src={item.productImage}
+                              alt={item.productName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <FiPackage size={20} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{item.productName}</h5>
+                          {item.size && (
+                            <p className="text-sm text-gray-600">Beden: {item.size}</p>
+                          )}
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
+                            <div>
+                              <span className="text-gray-600">İade Miktarı:</span>
+                              <p className="font-medium">{item.quantity} / {item.maxQuantity}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Birim Fiyat:</span>
+                              <p className="font-medium">₺{item.unitPrice.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">İade Tutarı:</span>
+                              <p className="font-medium text-green-600">₺{item.refundAmount.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">İade Nedeni:</span>
+                              <p className="font-medium">{item.reason}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* İade Özeti */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-lg mb-3">İade Özeti</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Toplam Ürün:</span>
+                    <p className="font-semibold">{refundDetail.refundItems.length}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Toplam Miktar:</span>
+                    <p className="font-semibold">{refundDetail.refundItems.reduce((sum, item) => sum + item.quantity, 0)} adet</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Toplam Tutar:</span>
+                    <p className="font-semibold text-blue-600">₺{refundDetail.totalRefundAmount.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600">Detay bilgileri yüklenemedi.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t bg-gray-50">
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Process Refund Modal
 const ProcessRefundModal: React.FC<ProcessModalProps> = ({
@@ -199,6 +437,8 @@ const AdminRefundManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<RefundRequest | null>(null);
   const [processModalOpen, setProcessModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedRefundId, setSelectedRefundId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -247,6 +487,12 @@ const AdminRefundManagement: React.FC = () => {
   const handleProcessRequest = (request: RefundRequest) => {
     setSelectedRequest(request);
     setProcessModalOpen(true);
+  };
+
+  // 🆕 YENİ: Detay modal handler
+  const handleViewDetail = (refundId: number) => {
+    setSelectedRefundId(refundId);
+    setDetailModalOpen(true);
   };
 
   const handleModalSuccess = () => {
@@ -456,10 +702,7 @@ const AdminRefundManagement: React.FC = () => {
                             </button>
                           )}
                           <button
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              // You can add a view details modal here
-                            }}
+                            onClick={() => handleViewDetail(request.id)}
                             className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
                           >
                             <FiEye size={14} />
@@ -482,6 +725,13 @@ const AdminRefundManagement: React.FC = () => {
         onClose={() => setProcessModalOpen(false)}
         refundRequest={selectedRequest}
         onSuccess={handleModalSuccess}
+      />
+
+      {/* 🆕 YENİ: Detail Modal */}
+      <DetailModal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        refundRequestId={selectedRefundId}
       />
     </div>
   );

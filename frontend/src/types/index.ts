@@ -145,6 +145,8 @@ export interface UpdateCartItemRequest {
 }
 
 // Order Types (🆕 GÜNCELLENMIŞ)
+// types.ts'deki Order interface'ine ekleyin:
+
 export interface Order {
   id: number;
   userId: number;
@@ -166,6 +168,8 @@ export interface Order {
   paymentTransactionId?: string;
   paymentDate?: string;
   orderItems: OrderItem[];
+  // 🆕 YENİ EKLENEN:
+  hasActiveRefundRequest?: boolean;
 }
 
 export interface OrderItem {
