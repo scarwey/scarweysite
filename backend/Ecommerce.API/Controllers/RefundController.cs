@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using ECommerce.API.Services.Interfaces;
 using ECommerce.API.Models;
+using ECommerce.API.DTOs;
 
 namespace ECommerce.API.Controllers
 {
@@ -46,10 +47,10 @@ namespace ECommerce.API.Controllers
 
                 if (!result)
                 {
-                    return BadRequest(new { message = "Sipari� iptal edilemedi. Sipari� durumunu kontrol edin." });
+                    return BadRequest(new { message = "Sipariş iptal edilemedi. Sipariş durumunu kontrol edin." });
                 }
 
-                return Ok(new { message = "Sipari� ba�ar�yla iptal edildi." });
+                return Ok(new { message = "Sipariş başarıyla iptal edildi." });
             }
             catch (UnauthorizedAccessException)
             {
@@ -77,7 +78,7 @@ namespace ECommerce.API.Controllers
 
                 return Ok(new
                 {
-                    message = "�ade talebi ba�ar�yla olu�turuldu.",
+                    message = "İade talebi başarıyla oluşturuldu.",
                     refundRequestId = refundRequest.Id,
                     status = refundRequest.Status.ToString()
                 });
@@ -213,7 +214,7 @@ namespace ECommerce.API.Controllers
 
                 return Ok(new
                 {
-                    message = request.Approved ? "�ade talebi onayland�." : "�ade talebi reddedildi.",
+                    message = request.Approved ? "İade talebi onaylandı." : "İade talebi reddedildi.",
                     refundRequest = new
                     {
                         id = refundRequest.Id,
@@ -229,6 +230,86 @@ namespace ECommerce.API.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        // 🆕 YENİ ENDPOINT'LER - ÜRÜN BAZLI İADE SİSTEMİ
+
+        // GET: api/refund/order-items/{orderId}
+        [HttpGet("order-items/{orderId}")]
+        public async Task<IActionResult> GetOrderItemsForRefund(int orderId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var orderItems = await _refundService.GetOrderItemsForRefundAsync(orderId, userId);
+                return Ok(orderItems);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/refund/request-with-items
+        [HttpPost("request-with-items")]
+        public async Task<IActionResult> CreateRefundRequestWithItems([FromBody] CreateRefundRequestDto request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var refundRequest = await _refundService.CreateRefundRequestWithItemsAsync(request, userId);
+
+                return Ok(new
+                {
+                    message = "İade talebi başarıyla oluşturuldu.",
+                    refundRequestId = refundRequest.Id,
+                    status = refundRequest.Status.ToString(),
+                    totalRefundAmount = refundRequest.RefundAmount
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/refund/admin/detail/{refundId}
+        [HttpGet("admin/detail/{refundId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetRefundRequestDetail(int refundId)
+        {
+            try
+            {
+                var detail = await _refundService.GetRefundRequestDetailAsync(refundId);
+                return Ok(detail);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -256,4 +337,6 @@ namespace ECommerce.API.Controllers
         public bool Approved { get; set; }
         public string? AdminNotes { get; set; }
     }
+
+
 }

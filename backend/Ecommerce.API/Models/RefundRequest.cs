@@ -16,6 +16,8 @@ namespace ECommerce.API.Models
         public virtual Order Order { get; set; } = null!;
         public virtual User RequestedBy { get; set; } = null!;
         public virtual User? ProcessedBy { get; set; }
+
+        public virtual ICollection<RefundItem> RefundItems { get; set; } = new List<RefundItem>();
     }
 
     public enum RefundStatus

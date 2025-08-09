@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import * as Icons from 'react-icons/fi';
 import { RootState } from '../store';
 import api from '../services/api';
-import { Order, OrderStatus } from '../types';
+import { Order, OrderStatus, OrderItemForRefund, RefundItemSelection } from '../types';
 
 const FiPackage = Icons.FiPackage as any;
 const FiCalendar = Icons.FiCalendar as any;
@@ -121,7 +121,7 @@ const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
   );
 };
 
-// Refund Request Modal Component
+// 🆕 YENİ REFUND REQUEST MODAL - Ürün Bazlı İade Sistemi
 const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
   isOpen,
   onClose,
@@ -130,35 +130,131 @@ const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
   totalAmount,
   onSuccess
 }) => {
-  const [reason, setReason] = useState('');
-  const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
-  const [refundAmount, setRefundAmount] = useState(totalAmount);
+  // States
   const [loading, setLoading] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [orderItems, setOrderItems] = useState<OrderItemForRefund[]>([]);
+  const [selectedItems, setSelectedItems] = useState<RefundItemSelection[]>([]);
+  const [generalReason, setGeneralReason] = useState('');
+  
+  // İade sebep seçenekleri
+  const refundReasons = [
+    'Ürün hasarlı geldi',
+    'Yanlış ürün gönderildi',
+    'Beden uymuyor',
+    'Kalite beklentimi karşılamıyor',
+    'Değişim istiyorum',
+    'Diğer'
+  ];
 
+  // Modal açıldığında sipariş ürünlerini getir
   useEffect(() => {
-    if (refundType === 'full') {
-      setRefundAmount(totalAmount);
+    if (isOpen && orderId) {
+      fetchOrderItems();
     }
-  }, [refundType, totalAmount]);
+  }, [isOpen, orderId]);
 
+  // Modal kapandığında state'leri temizle
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedItems([]);
+      setGeneralReason('');
+      setOrderItems([]);
+    }
+  }, [isOpen]);
+
+  const fetchOrderItems = async () => {
+    setLoadingItems(true);
+    try {
+      const response = await api.get<OrderItemForRefund[]>(`/refund/order-items/${orderId}`);
+      setOrderItems(response.data);
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Ürünler yüklenirken hata oluştu.');
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  // Ürün seçim checkbox handler
+  const handleItemSelection = (orderItem: OrderItemForRefund, isSelected: boolean) => {
+    if (isSelected) {
+      // Ürünü seç - varsayılan değerlerle
+      const newSelection: RefundItemSelection = {
+        orderItemId: orderItem.id,
+        quantity: Math.min(1, orderItem.quantity - orderItem.alreadyRefundedQuantity),
+        reason: refundReasons[0], // İlk sebep varsayılan
+        refundAmount: orderItem.unitPrice
+      };
+      setSelectedItems(prev => [...prev, newSelection]);
+    } else {
+      // Ürün seçimini kaldır
+      setSelectedItems(prev => prev.filter(item => item.orderItemId !== orderItem.id));
+    }
+  };
+
+  // Seçilen ürünün bilgisini güncelle
+  const updateSelectedItem = (orderItemId: number, field: keyof RefundItemSelection, value: any) => {
+    setSelectedItems(prev => 
+      prev.map(item => 
+        item.orderItemId === orderItemId 
+          ? { ...item, [field]: value }
+          : item
+      )
+    );
+  };
+
+  // Miktar değiştiğinde tutar hesapla
+  const handleQuantityChange = (orderItemId: number, newQuantity: number) => {
+    const orderItem = orderItems.find(item => item.id === orderItemId);
+    if (orderItem) {
+      const newAmount = orderItem.unitPrice * newQuantity;
+      updateSelectedItem(orderItemId, 'quantity', newQuantity);
+      updateSelectedItem(orderItemId, 'refundAmount', newAmount);
+    }
+  };
+
+  // Toplam iade tutarını hesapla
+  const totalRefundAmount = selectedItems.reduce((sum, item) => sum + item.refundAmount, 0);
+
+  // Form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) return;
+    
+    if (selectedItems.length === 0) {
+      alert('En az bir ürün seçmelisiniz.');
+      return;
+    }
+
+    if (!generalReason.trim()) {
+      alert('Genel iade nedeni girmelisiniz.');
+      return;
+    }
+
+    // Her seçilen ürün için sebep kontrolü
+    const hasEmptyReason = selectedItems.some(item => !item.reason.trim());
+    if (hasEmptyReason) {
+      alert('Tüm seçilen ürünler için iade nedeni belirtmelisiniz.');
+      return;
+    }
 
     setLoading(true);
     try {
-      await api.post('/refund/request', {
+      const requestData = {
         orderId,
-        reason: reason.trim(),
-        amount: refundType === 'partial' ? refundAmount : null
-      });
+        generalReason: generalReason.trim(),
+        items: selectedItems.map(item => ({
+          orderItemId: item.orderItemId,
+          quantity: item.quantity,
+          reason: item.reason,
+          refundAmount: item.refundAmount
+        }))
+      };
+
+      await api.post('/refund/request-with-items', requestData);
       
       alert('İade talebi başarıyla oluşturuldu. Talebiniz incelendikten sonra email ile bilgilendirileceksiniz.');
       onSuccess();
       onClose();
-      setReason('');
-      setRefundType('full');
-      setRefundAmount(totalAmount);
     } catch (error: any) {
       alert(error.response?.data?.message || 'İade talebi oluşturulurken hata oluştu.');
     } finally {
@@ -170,102 +266,222 @@ const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <FiRefreshCw className="text-blue-600" size={24} />
-          <h3 className="text-lg font-semibold">İade Talebi Oluştur</h3>
-        </div>
-        
-        <p className="text-gray-600 mb-4">
-          <strong>#{orderNumber}</strong> numaralı siparişiniz için iade talebi oluşturun.
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          {/* Refund Type Selection */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              İade Türü
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="full"
-                  checked={refundType === 'full'}
-                  onChange={(e) => setRefundType(e.target.value as 'full')}
-                  className="mr-2"
-                  disabled={loading}
-                />
-                <span>Tam İade (₺{totalAmount.toFixed(2)})</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="partial"
-                  checked={refundType === 'partial'}
-                  onChange={(e) => setRefundType(e.target.value as 'partial')}
-                  className="mr-2"
-                  disabled={loading}
-                />
-                <span>Kısmi İade</span>
-              </label>
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FiRefreshCw className="text-blue-600" size={24} />
+              <h3 className="text-xl font-semibold">İade Talebi Oluştur</h3>
             </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition"
+              disabled={loading}
+            >
+              <FiX size={24} />
+            </button>
           </div>
+          <p className="text-gray-600 mt-2">
+            <strong>#{orderNumber}</strong> numaralı siparişinizden iade etmek istediğiniz ürünleri seçin.
+          </p>
+        </div>
 
-          {/* Partial Refund Amount */}
-          {refundType === 'partial' && (
-            <div className="mb-4">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Genel İade Nedeni */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                İade Miktarı (₺)
+                Genel İade Nedeni <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(Number(e.target.value))}
-                min="1"
-                max={totalAmount}
-                step="0.01"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                disabled={loading}
+              <textarea
+                value={generalReason}
+                onChange={(e) => setGeneralReason(e.target.value)}
+                placeholder="İade talebinizin genel nedenini açıklayın..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                rows={3}
                 required
+                disabled={loading}
               />
             </div>
-          )}
 
-          {/* Reason */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              İade Nedeni <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="İade nedeninizi açıklayın..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-              rows={3}
-              required
-              disabled={loading}
-            />
-          </div>
+            {/* Ürün Listesi */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Sipariş Ürünleri</h4>
+              
+              {loadingItems ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-600 mt-2">Ürünler yükleniyor...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orderItems.map((orderItem) => {
+                    const isSelected = selectedItems.some(item => item.orderItemId === orderItem.id);
+                    const selectedItem = selectedItems.find(item => item.orderItemId === orderItem.id);
+                    const availableQuantity = orderItem.quantity - orderItem.alreadyRefundedQuantity;
 
+                    return (
+                      <div key={orderItem.id} className={`border rounded-lg p-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                        <div className="flex items-start gap-4">
+                          {/* Checkbox */}
+                          <div className="pt-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => handleItemSelection(orderItem, e.target.checked)}
+                              disabled={!orderItem.canRefund || loading}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                          </div>
+
+                          {/* Product Image */}
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                            {orderItem.productImage ? (
+                              <img
+                                src={orderItem.productImage}
+                                alt={orderItem.productName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <FiPackage size={20} />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Product Info */}
+                          <div className="flex-1">
+                            <h5 className="font-medium text-gray-900">{orderItem.productName}</h5>
+                            {orderItem.size && (
+                              <p className="text-sm text-gray-600">Beden: {orderItem.size}</p>
+                            )}
+                            <p className="text-sm text-gray-600">
+                              Birim Fiyat: ₺{orderItem.unitPrice.toFixed(2)}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Toplam Adet: {orderItem.quantity}
+                              {orderItem.alreadyRefundedQuantity > 0 && (
+                                <span className="text-orange-600 ml-1">
+                                  (Daha önce {orderItem.alreadyRefundedQuantity} iade edildi)
+                                </span>
+                              )}
+                            </p>
+                            
+                            {!orderItem.canRefund && (
+                              <p className="text-sm text-red-600 mt-1">Bu ürün iade edilemez</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Seçili ürün için detaylar */}
+                        {isSelected && selectedItem && (
+                          <div className="mt-4 pt-4 border-t border-blue-200 space-y-3">
+                            {/* Miktar Seçimi */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  İade Miktarı
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={availableQuantity}
+                                  value={selectedItem.quantity}
+                                  onChange={(e) => handleQuantityChange(orderItem.id, parseInt(e.target.value) || 1)}
+                                  className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                  disabled={loading}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Maksimum: {availableQuantity} adet
+                                </p>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  İade Tutarı
+                                </label>
+                                <div className="w-full p-2 bg-gray-100 border border-gray-300 rounded text-gray-700 font-medium">
+                                  ₺{selectedItem.refundAmount.toFixed(2)}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {selectedItem.quantity} x ₺{orderItem.unitPrice.toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* İade Nedeni */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                İade Nedeni <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                value={selectedItem.reason}
+                                onChange={(e) => updateSelectedItem(orderItem.id, 'reason', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                disabled={loading}
+                                required
+                              >
+                                {refundReasons.map((reason, index) => (
+                                  <option key={index} value={reason}>
+                                    {reason}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Toplam Özet */}
+            {selectedItems.length > 0 && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h5 className="font-semibold text-gray-900 mb-2">İade Özeti</h5>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Seçilen Ürün Sayısı:</span>
+                    <span>{selectedItems.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Toplam İade Miktarı:</span>
+                    <span>{selectedItems.reduce((sum, item) => sum + item.quantity, 0)} adet</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-base pt-2 border-t">
+                    <span>Toplam İade Tutarı:</span>
+                    <span className="text-blue-600">₺{totalRefundAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t bg-gray-50">
           <div className="flex gap-3 justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
               disabled={loading}
             >
               Vazgeç
             </button>
             <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={loading || !reason.trim()}
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              disabled={loading || selectedItems.length === 0 || !generalReason.trim()}
             >
-              {loading ? 'Talep Oluşturuluyor...' : 'İade Talebi Oluştur'}
+              {loading ? 'Talep Oluşturuluyor...' : `İade Talebi Oluştur (₺${totalRefundAmount.toFixed(2)})`}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -292,30 +508,16 @@ const OrderHistory: React.FC = () => {
   }, [user, navigate]);
 
   const fetchOrders = async () => {
-  try {
-    setLoading(true);
-    const response = await api.get<Order[]>('/orders');
-    setOrders(response.data);
-    
-    // 🔍 DEBUG - Backend'den gelen data yapısını kontrol et
-    console.log('🔥 ORDER HISTORY DEBUG:');
-    console.log('Orders response:', response.data);
-    if (response.data && response.data.length > 0) {
-      console.log('First order:', response.data[0]);
-      console.log('First order items:', response.data[0].orderItems);
-      if (response.data[0].orderItems && response.data[0].orderItems.length > 0) {
-        console.log('First order item:', response.data[0].orderItems[0]);
-        console.log('productVariant:', response.data[0].orderItems[0].productVariant);
-        console.log('selectedSize:', response.data[0].orderItems[0].selectedSize);
-      }
+    try {
+      setLoading(true);
+      const response = await api.get<Order[]>('/orders');
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const getStatusInfo = (status: OrderStatus) => {
     switch (status) {
@@ -445,7 +647,7 @@ const OrderHistory: React.FC = () => {
                 </div>
               </div>
 
-              {/* Order Items (Expandable) - 🆕 BEDEN BİLGİSİ İLE */}
+              {/* Order Items (Expandable) */}
               {isExpanded && (
                 <div className="border-t bg-gray-50 p-6">
                   <h4 className="font-semibold mb-4">Sipariş Ürünleri</h4>
@@ -471,7 +673,7 @@ const OrderHistory: React.FC = () => {
                         <div className="flex-1">
                           <h5 className="font-medium">{item.productName}</h5>
                           
-                          {/* 🆕 BEDEN BİLGİSİ - Cart.tsx'ten kopyalandı */}
+                          {/* Beden bilgisi */}
                           {item.productVariant && (
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
@@ -489,7 +691,7 @@ const OrderHistory: React.FC = () => {
                             </div>
                           )}
                           
-                          {/* 🆕 FALLBACK - Eğer productVariant yoksa ama selectedSize varsa */}
+                          {/* Fallback beden bilgisi */}
                           {!item.productVariant && item.selectedSize && (
                             <div className="mb-2">
                               <span className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded-full">

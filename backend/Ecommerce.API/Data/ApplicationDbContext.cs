@@ -23,6 +23,7 @@ namespace ECommerce.API.Data
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<RefundRequest> RefundRequests { get; set; }
+        public DbSet<RefundItem> RefundItems { get; set; } // 🆕 YENİ EKLENEN
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -176,6 +177,23 @@ namespace ECommerce.API.Data
                 .Property(rr => rr.RefundAmount)
                 .HasColumnType("decimal(18,2)");
 
+            // 🆕 RefundItem relationships
+            modelBuilder.Entity<RefundItem>()
+                .HasOne(ri => ri.RefundRequest)
+                .WithMany(rr => rr.RefundItems)
+                .HasForeignKey(ri => ri.RefundRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RefundItem>()
+                .HasOne(ri => ri.OrderItem)
+                .WithMany()
+                .HasForeignKey(ri => ri.OrderItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RefundItem>()
+                .Property(ri => ri.RefundAmount)
+                .HasColumnType("decimal(18,2)");
+
             // Address relationships
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.User)
@@ -208,6 +226,13 @@ namespace ECommerce.API.Data
             modelBuilder.Entity<Order>()
                 .HasIndex(o => o.OrderNumber)
                 .IsUnique();
+
+            // 🆕 RefundItem indexes
+            modelBuilder.Entity<RefundItem>()
+                .HasIndex(ri => ri.RefundRequestId);
+
+            modelBuilder.Entity<RefundItem>()
+                .HasIndex(ri => ri.OrderItemId);
 
             // ✅ CONSTRAINTS - YENİ SYNTAX (CS0618 düzeltildi)
             modelBuilder.Entity<Product>()

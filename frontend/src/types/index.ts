@@ -12,6 +12,29 @@ export interface User {
   role: string[];
 }
 
+// 🆕 REFUND TYPES - types.ts dosyasının sonuna ekleyin:
+
+// İade için sipariş ürünü tipi
+export interface OrderItemForRefund {
+  id: number;
+  productName: string;
+  productImage?: string;
+  size?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  canRefund: boolean;
+  alreadyRefundedQuantity: number;
+}
+
+// Kullanıcının seçtiği iade ürünü
+export interface RefundItemSelection {
+  orderItemId: number;
+  quantity: number;
+  reason: string;
+  refundAmount: number;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;
