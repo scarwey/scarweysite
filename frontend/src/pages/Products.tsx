@@ -13,6 +13,24 @@ const FiChevronDown = Icons.FiChevronDown as any;
 const FiChevronLeft = Icons.FiChevronLeft as any;
 const FiChevronRight = Icons.FiChevronRight as any;
 
+// Responsive hook
+const useWindowSize = () => {
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return windowSize;
+};
+
 const Products: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,6 +39,9 @@ const Products: React.FC = () => {
   
   const { products, pagination, filters, isLoading } = useSelector((state: RootState) => state.products);
   const { categories } = useSelector((state: RootState) => state.categories);
+  
+  // Responsive hook kullanımı
+  const { width: windowWidth } = useWindowSize();
 
   // Local filter states
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -385,7 +406,7 @@ const Products: React.FC = () => {
                 <button
                   onClick={() => {
                     // Desktop için
-                    if (window.innerWidth >= 1024) {
+                    if (windowWidth >= 1024) {
                       setIsDesktopFilterOpen(!isDesktopFilterOpen);
                     } else {
                       // Mobile için
@@ -516,44 +537,132 @@ const Products: React.FC = () => {
                 ))}
               </div>
 
-              {/* Pagination - Mobil Optimize */}
+              {/* ✅ Pagination - DÜZELTİLMİŞ VE GELİŞTİRİLMİŞ */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="mt-6 sm:mt-8 flex justify-center">
-                  <nav className="flex space-x-1 sm:space-x-2">
+                <div className="mt-6 sm:mt-8 flex flex-col items-center space-y-4">
+                  <nav className="flex items-center space-x-1 sm:space-x-2">
+                    {/* Önceki Button */}
                     <button
                       onClick={() => handlePageChange(pagination.currentPage - 1)}
                       disabled={pagination.currentPage === 1}
-                      className="px-2 py-2 sm:px-3 sm:py-2 rounded-lg bg-white shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+                      className="px-2 py-2 sm:px-3 sm:py-2 rounded-lg bg-white shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex items-center gap-1"
                     >
-                      Önceki
+                      <FiChevronLeft size={16} />
+                      <span className="hidden sm:inline">Önceki</span>
                     </button>
 
-                    {/* Mobilde daha az sayfa göster */}
-                    {Array.from({ length: Math.min(3, pagination.totalPages) }, (_, i) => {
-                      const page = i + 1;
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm ${
-                            pagination.currentPage === page
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-white shadow hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
+                    {/* Sayfa Numaraları - Dinamik */}
+                    {(() => {
+                      const currentPage = pagination.currentPage;
+                      const totalPages = pagination.totalPages;
+                      const pages = [];
 
+                      // Mobile için basit gösterim (3 sayfa max)
+                      if (windowWidth < 640) {
+                        const start = Math.max(1, currentPage - 1);
+                        const end = Math.min(totalPages, currentPage + 1);
+                        
+                        for (let i = start; i <= end; i++) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => handlePageChange(i)}
+                              className={`px-3 py-2 rounded-lg text-xs ${
+                                currentPage === i
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-white shadow hover:bg-gray-50'
+                              }`}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+                      } else {
+                        // Desktop için gelişmiş gösterim
+                        // İlk sayfa
+                        if (currentPage > 3) {
+                          pages.push(
+                            <button
+                              key={1}
+                              onClick={() => handlePageChange(1)}
+                              className="px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm bg-white shadow hover:bg-gray-50"
+                            >
+                              1
+                            </button>
+                          );
+                          
+                          if (currentPage > 4) {
+                            pages.push(
+                              <span key="start-ellipsis" className="px-2 py-2 text-gray-500">
+                                ...
+                              </span>
+                            );
+                          }
+                        }
+
+                        // Mevcut sayfa ve çevresindeki sayfalar
+                        const start = Math.max(1, currentPage - 2);
+                        const end = Math.min(totalPages, currentPage + 2);
+
+                        for (let i = start; i <= end; i++) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => handlePageChange(i)}
+                              className={`px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm ${
+                                currentPage === i
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-white shadow hover:bg-gray-50'
+                              }`}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+
+                        // Son sayfa
+                        if (currentPage < totalPages - 2) {
+                          if (currentPage < totalPages - 3) {
+                            pages.push(
+                              <span key="end-ellipsis" className="px-2 py-2 text-gray-500">
+                                ...
+                              </span>
+                            );
+                          }
+                          
+                          pages.push(
+                            <button
+                              key={totalPages}
+                              onClick={() => handlePageChange(totalPages)}
+                              className="px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm bg-white shadow hover:bg-gray-50"
+                            >
+                              {totalPages}
+                            </button>
+                          );
+                        }
+                      }
+
+                      return pages;
+                    })()}
+
+                    {/* Sonraki Button */}
                     <button
                       onClick={() => handlePageChange(pagination.currentPage + 1)}
                       disabled={pagination.currentPage === pagination.totalPages}
-                      className="px-2 py-2 sm:px-3 sm:py-2 rounded-lg bg-white shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+                      className="px-2 py-2 sm:px-3 sm:py-2 rounded-lg bg-white shadow hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex items-center gap-1"
                     >
-                      Sonraki
+                      <span className="hidden sm:inline">Sonraki</span>
+                      <FiChevronRight size={16} />
                     </button>
                   </nav>
+
+                  {/* Pagination Info */}
+                  <div className="text-center text-xs sm:text-sm text-gray-600">
+                    Sayfa {pagination.currentPage} / {pagination.totalPages} 
+                    <span className="hidden sm:inline">
+                      {" "}({pagination.totalItems} ürün)
+                    </span>
+                  </div>
                 </div>
               )}
             </>

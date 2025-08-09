@@ -713,7 +713,7 @@ const SellerProductManagement: React.FC = () => {
               })}
             </div>
 
-            {/* Pagination */}
+            {/* ✅ Pagination - DÜZELTİLMİŞ VE GELİŞTİRİLMİŞ */}
             {totalPages > 1 && (
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
@@ -730,22 +730,73 @@ const SellerProductManagement: React.FC = () => {
                       Önceki
                     </button>
                     
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const page = i + 1;
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 text-sm border rounded-md ${
-                            currentPage === page
-                              ? 'bg-purple-600 text-white border-purple-600'
-                              : 'border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
+                    {/* Dinamik Sayfa Numaraları */}
+                    {(() => {
+                      const pages = [];
+                      const startPage = Math.max(1, currentPage - 2);
+                      const endPage = Math.min(totalPages, currentPage + 2);
+
+                      // İlk sayfa ve ellipsis
+                      if (startPage > 1) {
+                        pages.push(
+                          <button
+                            key={1}
+                            onClick={() => handlePageChange(1)}
+                            className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            1
+                          </button>
+                        );
+                        
+                        if (startPage > 2) {
+                          pages.push(
+                            <span key="start-ellipsis" className="px-2 py-1 text-sm text-gray-500">
+                              ...
+                            </span>
+                          );
+                        }
+                      }
+
+                      // Mevcut sayfa civarındaki sayfalar
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => handlePageChange(i)}
+                            className={`px-3 py-1 text-sm border rounded-md ${
+                              currentPage === i
+                                ? 'bg-purple-600 text-white border-purple-600'
+                                : 'border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+
+                      // Son sayfa ve ellipsis
+                      if (endPage < totalPages) {
+                        if (endPage < totalPages - 1) {
+                          pages.push(
+                            <span key="end-ellipsis" className="px-2 py-1 text-sm text-gray-500">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        pages.push(
+                          <button
+                            key={totalPages}
+                            onClick={() => handlePageChange(totalPages)}
+                            className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            {totalPages}
+                          </button>
+                        );
+                      }
+
+                      return pages;
+                    })()}
                     
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
