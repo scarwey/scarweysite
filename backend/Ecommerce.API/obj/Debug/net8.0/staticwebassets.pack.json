@@ -1,0 +1,29 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\alper\\OneDrive\\Masaüstü\\Scarwey\\backend\\Ecommerce.API\\wwwroot\\images\\products\\277a2270-cf3f-4fae-afc1-a56c6fb6b861.png",
+      "PackagePath": "staticwebassets\\images\\products\\277a2270-cf3f-4fae-afc1-a56c6fb6b861.png"
+    },
+    {
+      "Id": "C:\\Users\\alper\\OneDrive\\Masaüstü\\Scarwey\\backend\\Ecommerce.API\\wwwroot\\images\\products\\aa593bcc-d5e0-4ca9-99ca-419eb41b582f.png",
+      "PackagePath": "staticwebassets\\images\\products\\aa593bcc-d5e0-4ca9-99ca-419eb41b582f.png"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.Ecommerce.API.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.Ecommerce.API.props",
+      "PackagePath": "build\\Ecommerce.API.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.Ecommerce.API.props",
+      "PackagePath": "buildMultiTargeting\\Ecommerce.API.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.Ecommerce.API.props",
+      "PackagePath": "buildTransitive\\Ecommerce.API.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
