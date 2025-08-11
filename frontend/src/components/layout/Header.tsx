@@ -356,8 +356,8 @@ const Header: React.FC = () => {
 
       {/* Enhanced Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl absolute top-full left-0 right-0 z-50 w-full">
-          <div className="w-full px-4 py-4 max-h-96 overflow-y-auto">
+        <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-gray-200/50 shadow-2xl absolute top-full left-0 right-0 z-50 w-full max-h-[calc(100vh-100px)] overflow-y-auto">
+          <div className="w-full px-4 py-4">
             {/* Enhanced Mobile Navigation */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               {/* Ana Sayfa */}
