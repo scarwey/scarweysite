@@ -35,11 +35,14 @@ namespace ECommerce.API.Controllers
         {
             try
             {
+                // ✅ DÜZELTME 1: categoryId null'u List<int>? null olarak çevir
+                List<int>? categoryIdsList = null;
+                
                 var (products, totalItems) = await _productService.GetProductsAsync(
                     page: 1,
                     pageSize: 1000,
                     search: null,
-                    categoryId: null,
+                    categoryIds: categoryIdsList,  // ✅ categoryId yerine categoryIds
                     minPrice: null,
                     maxPrice: null,
                     sortBy: "name"
@@ -231,7 +234,6 @@ namespace ECommerce.API.Controllers
             }
         }
 
-
         // GET: api/seller/products - ProductsController'dan kopyalandı
         [HttpGet("products")]
         public async Task<ActionResult<object>> GetProducts(
@@ -246,8 +248,11 @@ namespace ECommerce.API.Controllers
         {
             try
             {
+                // ✅ DÜZELTME 2: categoryId'yi List<int>? olarak çevir
+                List<int>? categoryIdsList = categoryId.HasValue ? new List<int> { categoryId.Value } : null;
+                
                 var (products, totalItems) = await _productService.GetProductsAsync(
-                    page, pageSize, search, categoryId, minPrice, maxPrice, sortBy);
+                    page, pageSize, search, categoryIdsList, minPrice, maxPrice, sortBy);
 
                 // Düşük stok filtresi
                 if (stock == "low")

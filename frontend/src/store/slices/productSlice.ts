@@ -31,7 +31,7 @@ const initialState: ProductState = {
   error: null,
 };
 
-// ✅ TAM DÜZELTME: Tüm backend parametrelerini destekler
+// ✅ TAM DÜZELTME: CategoryIds array desteği eklendi
 export const fetchProducts = createAsyncThunk(
   'products/fetchProducts',
   async (filters: any) => {
@@ -45,10 +45,27 @@ export const fetchProducts = createAsyncThunk(
     
     // Arama ve kategori
     if (filters.search && filters.search.trim()) params.append('search', filters.search.trim());
-    if (filters.categoryId) params.append('categoryId', filters.categoryId.toString());
     
-    // 🆕 EN ÖNEMLİ EKLEME: Gender filtresi
-    if (filters.gender && filters.gender.trim()) {
+    // 🆕 CATEGORYIDS ARRAY DESTEĞİ
+    if (filters.categoryIds && Array.isArray(filters.categoryIds) && filters.categoryIds.length > 0) {
+      params.append('categoryIds', filters.categoryIds.join(','));
+      console.log('📂 CategoryIds filter added:', filters.categoryIds);
+    }
+    
+    // Tekil categoryId (geriye uyumluluk için)
+    if (filters.categoryId) {
+      params.append('categoryId', filters.categoryId.toString());
+      console.log('📂 CategoryId filter added:', filters.categoryId);
+    }
+    
+    // 🆕 SUBCATEGORYIDS ARRAY DESTEĞİ
+    if (filters.subCategoryIds && Array.isArray(filters.subCategoryIds) && filters.subCategoryIds.length > 0) {
+      params.append('subCategoryIds', filters.subCategoryIds.join(','));
+      console.log('📁 SubCategoryIds filter added:', filters.subCategoryIds);
+    }
+    
+    // 🆕 Gender filtresi
+    if (filters.gender && filters.gender.trim() && filters.gender !== 'undefined') {
       params.append('gender', filters.gender.trim());
       console.log('🎯 Gender filter added:', filters.gender);
     }
@@ -56,9 +73,11 @@ export const fetchProducts = createAsyncThunk(
     // Fiyat aralığı
     if (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice !== '') {
       params.append('minPrice', filters.minPrice.toString());
+      console.log('💰 MinPrice filter added:', filters.minPrice);
     }
     if (filters.maxPrice !== undefined && filters.maxPrice !== null && filters.maxPrice !== '') {
       params.append('maxPrice', filters.maxPrice.toString());
+      console.log('💰 MaxPrice filter added:', filters.maxPrice);
     }
     
     // Sıralama

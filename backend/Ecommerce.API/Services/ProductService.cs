@@ -16,24 +16,23 @@ namespace ECommerce.API.Services
             _logger = logger;
         }
 
-        // ProductService.cs - GetProductsAsync metodunu güncelle
-
+        // ✅ GÜNCELLENEN GetProductsAsync - Çoklu kategori desteği
         public async Task<(IEnumerable<Product> products, int totalItems)> GetProductsAsync(
-     int page,
-     int pageSize,
-     string? search,
-     int? categoryId,
-     decimal? minPrice,
-     decimal? maxPrice,
-     string? sortBy,
-     bool? featured = null,
-     bool? sale = null,
-     string? gender = null)
+            int page,
+            int pageSize,
+            string? search,
+            List<int>? categoryIds,    // 🔄 int? categoryId → List<int>? categoryIds
+            decimal? minPrice,
+            decimal? maxPrice,
+            string? sortBy,
+            bool? featured = null,
+            bool? sale = null,
+            string? gender = null)
         {
             try
             {
-                _logger.LogInformation("🔍 GetProductsAsync called with filters: page={Page}, gender={Gender}, categoryId={CategoryId}, search={Search}, sale={Sale}, featured={Featured}",
-                    page, gender, categoryId, search, sale, featured);
+                _logger.LogInformation("🔍 GetProductsAsync called with filters: page={Page}, gender={Gender}, categoryIds=[{CategoryIds}], search={Search}, sale={Sale}, featured={Featured}",
+                    page, gender, categoryIds != null ? string.Join(",", categoryIds) : "null", search, sale, featured);
 
                 var query = _context.Products
                     .Include(p => p.Images)
@@ -41,7 +40,7 @@ namespace ECommerce.API.Services
                     .Include(p => p.Variants)
                     .Where(p => p.IsActive);
 
-                // Apply filters
+                // ✅ ARAMA FİLTRESİ
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     _logger.LogInformation("🔍 Applying search filter: {Search}", search);
@@ -51,54 +50,55 @@ namespace ECommerce.API.Services
                         p.Brand.ToLower().Contains(search.ToLower()));
                 }
 
-                // 🆕 GÜNCELLENMIŞ HİERARCHİCAL KATEGORİ FİLTRELEME
-                if (categoryId.HasValue)
-                {
-                    _logger.LogInformation("📂 Applying hierarchical category filter: {CategoryId}", categoryId.Value);
+                // ProductService.cs'deki kategori filtreleme kısmını bu kodla değiştir:
 
-                    // Seçilen kategoriyi kontrol et
-                    var selectedCategory = await _context.Categories
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(c => c.Id == categoryId.Value);
+// ✅ HİERARCHİCAL ÇOKLU KATEGORİ FİLTRELEME - Ana kategori + Alt kategoriler
+if (categoryIds != null && categoryIds.Count > 0)
+{
+    _logger.LogInformation("📂 Applying hierarchical multi-category filter: [{CategoryIds}]", string.Join(", ", categoryIds));
+    
+    // Seçilen kategoriler + bunların alt kategorilerini bul
+    var allCategoryIds = new List<int>();
+    
+    foreach (var categoryId in categoryIds)
+    {
+        // Ana kategoriyi ekle
+        allCategoryIds.Add(categoryId);
+        
+        // Bu kategorinin alt kategorilerini bul ve ekle
+        var subCategoryIds = await _context.Categories
+            .Where(c => c.ParentCategoryId == categoryId && c.IsActive)
+            .Select(c => c.Id)
+            .ToListAsync();
+        
+        allCategoryIds.AddRange(subCategoryIds);
+        
+        if (subCategoryIds.Count > 0)
+        {
+            _logger.LogInformation("📁 Category {CategoryId} has subcategories: [{SubCategoryIds}]", 
+                categoryId, string.Join(", ", subCategoryIds));
+        }
+    }
+    
+    // Duplicateları temizle
+    allCategoryIds = allCategoryIds.Distinct().ToList();
+    
+    _logger.LogInformation("📂 Final category filter includes: [{AllCategoryIds}]", string.Join(", ", allCategoryIds));
+    
+    // Filtreleme uygula: Ana kategoriler + Alt kategoriler
+    query = query.Where(p => allCategoryIds.Contains(p.CategoryId));
+    
+    _logger.LogInformation("📂 Hierarchical multi-category filter applied: Total Categories=[{Count}]", allCategoryIds.Count);
+}
 
-                    if (selectedCategory != null)
-                    {
-                        if (selectedCategory.ParentCategoryId == null)
-                        {
-                            // Ana kategori seçildi - hem kendisi hem alt kategorilerini dahil et
-                            var categoryIds = await _context.Categories
-                                .Where(c => c.Id == categoryId.Value || c.ParentCategoryId == categoryId.Value)
-                                .Where(c => c.IsActive)
-                                .Select(c => c.Id)
-                                .ToListAsync();
-
-                            _logger.LogInformation("📂 Main category selected. Including subcategories: {CategoryIds}",
-                                string.Join(", ", categoryIds));
-
-                            query = query.Where(p => categoryIds.Contains(p.CategoryId));
-                        }
-                        else
-                        {
-                            // Alt kategori seçildi - sadece o kategori
-                            _logger.LogInformation("📂 Subcategory selected. Filtering by single category: {CategoryId}", categoryId.Value);
-                            query = query.Where(p => p.CategoryId == categoryId.Value);
-                        }
-                    }
-                    else
-                    {
-                        // Kategori bulunamadı - normal tek kategori filtrelemesi yap
-                        _logger.LogWarning("📂 Category not found: {CategoryId}. Applying simple filter.", categoryId.Value);
-                        query = query.Where(p => p.CategoryId == categoryId.Value);
-                    }
-                }
-
-                // Gender filtresi (değişiklik yok)
+                // ✅ CİNSİYET FİLTRESİ - AND mantığı
                 if (!string.IsNullOrWhiteSpace(gender))
                 {
                     _logger.LogInformation("👤 Applying gender filter: {Gender}", gender);
                     query = query.Where(p => p.Gender == gender);
                 }
 
+                // ✅ FİYAT FİLTRELERİ - AND mantığı
                 if (minPrice.HasValue)
                 {
                     _logger.LogInformation("💰 Applying min price filter: {MinPrice}", minPrice.Value);
@@ -111,6 +111,7 @@ namespace ECommerce.API.Services
                     query = query.Where(p => p.Price <= maxPrice.Value);
                 }
 
+                // ✅ ÖZEL FİLTRELER - AND mantığı
                 if (featured.HasValue && featured.Value)
                 {
                     _logger.LogInformation("⭐ Applying featured filter");
@@ -126,7 +127,7 @@ namespace ECommerce.API.Services
                         p.DiscountPrice.Value < p.Price);
                 }
 
-                // Sorting (değişiklik yok)
+                // ✅ SIRALAMA
                 _logger.LogInformation("📊 Applying sort: {SortBy}", sortBy);
                 query = sortBy?.ToLower() switch
                 {
@@ -141,6 +142,7 @@ namespace ECommerce.API.Services
                     _ => query.OrderBy(p => p.Name)
                 };
 
+                // ✅ TOPLAM SAYIM VE SONUÇ
                 var totalItems = await query.CountAsync();
                 _logger.LogInformation("📊 Total items found: {TotalItems}", totalItems);
 
@@ -149,6 +151,13 @@ namespace ECommerce.API.Services
                     .Take(pageSize)
                     .ToListAsync();
 
+                // ✅ DEBUG - İlk 5 ürünün detayını logla
+                foreach(var product in products.Take(5))
+                {
+                    _logger.LogInformation("📦 Product found: '{Name}', CategoryId: {CategoryId}, Gender: {Gender}", 
+                        product.Name, product.CategoryId, product.Gender);
+                }
+
                 _logger.LogInformation("✅ Products fetched successfully: {Count} items on page {Page}",
                     products.Count, page);
 
@@ -156,8 +165,8 @@ namespace ECommerce.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error getting products with filters: gender={Gender}, categoryId={CategoryId}",
-                    gender, categoryId);
+                _logger.LogError(ex, "❌ Error getting products with filters: gender={Gender}, categoryIds=[{CategoryIds}]",
+                    gender, categoryIds != null ? string.Join(",", categoryIds) : "null");
                 throw;
             }
         }
@@ -169,7 +178,7 @@ namespace ECommerce.API.Services
                 return await _context.Products
                     .Include(p => p.Images)
                     .Include(p => p.Category)
-                    .Include(p => p.Variants!.Where(v => v.IsActive && v.IsAvailable)) // 🆕 Aktif varyantları dahil et
+                    .Include(p => p.Variants!.Where(v => v.IsActive && v.IsAvailable))
                     .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
             }
             catch (Exception ex)
@@ -197,18 +206,15 @@ namespace ECommerce.API.Services
             }
         }
 
-        // 🆕 YENİ METOTLAR - VARIANT YÖNETİMİ
         public async Task<ProductVariant> CreateProductVariantAsync(ProductVariant variant)
         {
             try
             {
-                // 🔧 GÜNCELLENMIŞ - Önce mevcut variant'ı kontrol et (aktif/pasif fark etmez)
                 var existingVariant = await _context.ProductVariants
                     .FirstOrDefaultAsync(v => v.ProductId == variant.ProductId && v.Size == variant.Size);
 
                 if (existingVariant != null)
                 {
-                    // 🆕 YENİ YAKLAŞIM - Mevcut variant'ı güncelle, yeni oluşturma
                     _logger.LogInformation("Updating existing variant: ProductId={ProductId}, Size={Size}",
                         variant.ProductId, variant.Size);
 
@@ -217,12 +223,10 @@ namespace ECommerce.API.Services
                     existingVariant.PriceModifier = variant.PriceModifier;
                     existingVariant.IsAvailable = variant.IsAvailable;
                     existingVariant.SortOrder = variant.SortOrder;
-                    existingVariant.IsActive = true; // 🔧 Aktif yap
+                    existingVariant.IsActive = true;
                     existingVariant.UpdatedAt = DateTime.UtcNow;
 
                     await _context.SaveChangesAsync();
-
-                    // Ürünün toplam stokunu güncelle
                     await UpdateProductTotalStockAsync(variant.ProductId);
 
                     _logger.LogInformation("Existing variant updated: ProductId={ProductId}, Size={Size}",
@@ -230,15 +234,12 @@ namespace ECommerce.API.Services
                     return existingVariant;
                 }
 
-                // 🔧 Yeni variant oluştur
                 variant.CreatedAt = DateTime.UtcNow;
                 variant.UpdatedAt = DateTime.UtcNow;
                 variant.IsActive = true;
 
                 _context.ProductVariants.Add(variant);
                 await _context.SaveChangesAsync();
-
-                // Ürünün toplam stokunu güncelle
                 await UpdateProductTotalStockAsync(variant.ProductId);
 
                 _logger.LogInformation("New product variant created: ProductId={ProductId}, Size={Size}",
@@ -272,8 +273,6 @@ namespace ECommerce.API.Services
                 existingVariant.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
-
-                // Ürünün toplam stokunu güncelle
                 await UpdateProductTotalStockAsync(existingVariant.ProductId);
 
                 _logger.LogInformation("Product variant updated: ID={VariantId}", variantId);
@@ -296,11 +295,8 @@ namespace ECommerce.API.Services
                     return false;
                 }
 
-                // 🔧 HARD DELETE - Tamamen sil (soft delete değil)
-                _context.ProductVariants.Remove(variant); // Remove() = HARD DELETE
+                _context.ProductVariants.Remove(variant);
                 await _context.SaveChangesAsync();
-
-                // Ürünün toplam stokunu güncelle
                 await UpdateProductTotalStockAsync(variant.ProductId);
 
                 _logger.LogInformation("Product variant HARD deleted: ID={VariantId}", variantId);
@@ -368,7 +364,6 @@ namespace ECommerce.API.Services
             }
         }
 
-        // 🆕 Ürünün toplam stokunu güncelle (tüm varyantların toplamı)
         private async Task UpdateProductTotalStockAsync(int productId)
         {
             try
@@ -378,7 +373,6 @@ namespace ECommerce.API.Services
 
                 if (product.HasSizes)
                 {
-                    // Varyantları olan ürünler için toplam stok hesapla
                     var totalStock = await _context.ProductVariants
                         .Where(v => v.ProductId == productId && v.IsActive)
                         .SumAsync(v => v.StockQuantity);
@@ -394,7 +388,6 @@ namespace ECommerce.API.Services
             }
         }
 
-        // Mevcut metotlar devam ediyor... (GetSearchSuggestionsAsync, CreateProductAsync, vs.)
         public async Task<IEnumerable<string>> GetSearchSuggestionsAsync(string query)
         {
             if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
@@ -449,7 +442,6 @@ namespace ECommerce.API.Services
                     return null;
                 }
 
-                // Update properties
                 existingProduct.Name = product.Name;
                 existingProduct.Description = product.Description;
                 existingProduct.Price = product.Price;
@@ -459,8 +451,8 @@ namespace ECommerce.API.Services
                 existingProduct.Brand = product.Brand;
                 existingProduct.CategoryId = product.CategoryId;
                 existingProduct.IsFeatured = product.IsFeatured;
-                existingProduct.Gender = product.Gender; // 🆕
-                existingProduct.HasSizes = product.HasSizes; // 🆕
+                existingProduct.Gender = product.Gender;
+                existingProduct.HasSizes = product.HasSizes;
                 existingProduct.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -480,7 +472,7 @@ namespace ECommerce.API.Services
             try
             {
                 var product = await _context.Products
-                    .Include(p => p.Variants) // Variant'ları da dahil et
+                    .Include(p => p.Variants)
                     .FirstOrDefaultAsync(p => p.Id == id);
 
                 if (product == null)
@@ -488,13 +480,11 @@ namespace ECommerce.API.Services
                     return false;
                 }
 
-                // 🔧 SOFT DELETE - Güvenli silme
                 _logger.LogInformation("Performing SOFT DELETE for product: {ProductId}", id);
 
                 product.IsActive = false;
                 product.UpdatedAt = DateTime.UtcNow;
 
-                // Variant'ları da pasif yap
                 if (product.Variants != null)
                 {
                     foreach (var variant in product.Variants)

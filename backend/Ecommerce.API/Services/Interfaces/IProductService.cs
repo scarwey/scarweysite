@@ -4,18 +4,19 @@ namespace ECommerce.API.Services.Interfaces
 {
     public interface IProductService
     {
-        // Product CRUD Operations (🆕 GÜNCELLENMIŞ - gender parametresi eklendi)
-        Task<(IEnumerable<Product> products, int totalItems)> GetProductsAsync(
-            int page,
-            int pageSize,
-            string? search,
-            int? categoryId,
-            decimal? minPrice,
-            decimal? maxPrice,
-            string? sortBy,
-            bool? featured = null,
-            bool? sale = null,
-            string? gender = null); // 🆕 YENİ PARAMETRE
+        // ✅ YENİ - Çoklu kategori
+Task<(IEnumerable<Product> products, int totalItems)> GetProductsAsync(
+    int page,
+    int pageSize,
+    string? search,
+    List<int>? categoryIds,    // ← Bu şekilde değiştir
+    decimal? minPrice,
+    decimal? maxPrice,
+    string? sortBy,
+    bool? featured = null,
+    bool? sale = null,
+    string? gender = null);
+    
 
         Task<Product?> GetProductByIdAsync(int id);
         Task<IEnumerable<Product>> GetFeaturedProductsAsync(int count = 8);

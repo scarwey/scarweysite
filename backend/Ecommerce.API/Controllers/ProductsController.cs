@@ -11,34 +11,87 @@ namespace ECommerce.API.Controllers
     {
         private readonly IProductService _productService;
         private readonly ICloudinaryService _cloudinaryService;
-        private readonly ILogger<ProductsController> _logger; // 🆕 EKLE
+        private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IProductService productService, ICloudinaryService cloudinaryService, ILogger<ProductsController> logger) // 🆕 logger parametresi ekle
+        public ProductsController(IProductService productService, ICloudinaryService cloudinaryService, ILogger<ProductsController> logger)
         {
             _productService = productService;
             _cloudinaryService = cloudinaryService;
-            _logger = logger; // 🆕 EKLE
+            _logger = logger;
         }
-        // GET: api/products?page=1&pageSize=10&search=shirt&categoryId=1&gender=Erkek
+        
+        // ✅ DÜZELTILMIŞ GetProducts method
         [HttpGet]
         public async Task<ActionResult<object>> GetProducts(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] string? search = null,
             [FromQuery] int? categoryId = null,
+            [FromQuery] string? categoryIds = null, // ✅ categoryIds parametresi eklendi
             [FromQuery] decimal? minPrice = null,
             [FromQuery] decimal? maxPrice = null,
             [FromQuery] string? sortBy = "name",
             [FromQuery] bool? featured = null,
             [FromQuery] bool? sale = null,
-            [FromQuery] string? gender = null) // 🆕 YENİ PARAMETRE
+            [FromQuery] string? gender = null)
         {
             try
             {
-                var (products, totalItems) = await _productService.GetProductsAsync(
-                    page, pageSize, search, categoryId, minPrice, maxPrice, sortBy, featured, sale, gender);
+                // 🔍 DEBUG LOGLARI - Gelen parametreleri logla
+                _logger.LogInformation("🚀 GetProducts called - Raw categoryIds: '{CategoryIds}'", categoryIds ?? "null");
+                _logger.LogInformation("🚀 GetProducts called - Raw categoryId: '{CategoryId}'", categoryId?.ToString() ?? "null");
+                _logger.LogInformation("🚀 GetProducts called - Gender: '{Gender}'", gender ?? "null");
+
+                // ✅ categoryIds parse etme
+                if (!string.IsNullOrEmpty(categoryIds))
+                {
+                    try
+                    {
+                        categoryId = int.Parse(categoryIds.Split(',')[0]);
+                        _logger.LogInformation("📂 Parsed categoryId from categoryIds: {CategoryId}", categoryId);
+                    }
+                    catch (Exception parseEx)
+                    {
+                        _logger.LogWarning("⚠️ Error parsing categoryIds '{CategoryIds}': {Error}", categoryIds, parseEx.Message);
+                    }
+                }
+
+                _logger.LogInformation("🔧 Final categoryId being sent to service: {CategoryId}", categoryId?.ToString() ?? "null");
+// ✅ categoryIds'i List<int> olarak parse et
+List<int>? categoryIdsList = null;
+if (!string.IsNullOrEmpty(categoryIds))
+{
+    try
+    {
+        categoryIdsList = categoryIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(int.Parse)
+                                   .ToList();
+        _logger.LogInformation("📂 Parsed categoryIds: [{CategoryIds}]", string.Join(", ", categoryIdsList));
+    }
+    catch (FormatException)
+    {
+        _logger.LogWarning("⚠️ Invalid categoryIds format: {CategoryIds}", categoryIds);
+        return BadRequest(new { message = "Invalid categoryIds format" });
+    }
+}
+
+// ✅ Service metodunu yeni parametre ile çağır
+var (products, totalItems) = await _productService.GetProductsAsync(
+    page, pageSize, search, categoryIdsList, minPrice, maxPrice, sortBy, featured, sale, gender);
+                //                      ↑ categoryId yerine categoryIdsList
+    
+    
 
                 var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+                // 🔍 DEBUG - Dönen sonuçları logla
+                _logger.LogInformation("✅ Service returned {Count} products out of {TotalItems} total", products.Count(), totalItems);
+                
+                // İlk 3 ürünün kategori bilgilerini logla
+                foreach(var product in products.Take(3))
+                {
+                    _logger.LogInformation("📦 Product: '{Name}', CategoryId: {CategoryId}", product.Name, product.CategoryId);
+                }
 
                 return Ok(new
                 {
@@ -54,6 +107,7 @@ namespace ECommerce.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "❌ Error in GetProducts");
                 return StatusCode(500, new { message = "An error occurred while fetching products", error = ex.Message });
             }
         }
@@ -111,8 +165,6 @@ namespace ECommerce.API.Controllers
                 return StatusCode(500, new { message = "An error occurred while fetching suggestions", error = ex.Message });
             }
         }
-
-        // ProductsController.cs dosyanızdaki enum kullanan 5 endpoint'i şu şekilde değiştirin:
 
         // 🆕 GET: api/products/genders - Mevcut cinsiyetleri getir
         [HttpGet("genders")]
@@ -277,7 +329,6 @@ namespace ECommerce.API.Controllers
             }
         }
 
-        // DELETE: api/products/variants/123 - HARD DELETE
         // DELETE: api/products/variants/123
         [HttpDelete("variants/{variantId}")]
         public async Task<IActionResult> DeleteProductVariant(int variantId)
@@ -298,6 +349,7 @@ namespace ECommerce.API.Controllers
                 return StatusCode(500, new { message = "Error deleting product variant", error = ex.Message });
             }
         }
+
         // GET: api/products/variants/123/price - Varyant fiyatını getir
         [HttpGet("variants/{variantId}/price")]
         public async Task<ActionResult<decimal>> GetVariantPrice(int variantId)
