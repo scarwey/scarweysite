@@ -389,26 +389,7 @@ const handleAddToCart = () => {
                   {product.name}
                 </h1>
                 
-                {/* Rating & Reviews */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <FiStar 
-                        key={i} 
-                        size={16} 
-                        className={`${i < 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
-                      />
-                    ))}
-                    <span className="text-sm text-gray-600 ml-1">(4.2)</span>
-                  </div>
-                  <span className="text-gray-300">•</span>
-                  <button className="text-sm text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-                    <FiMessageCircle size={14} />
-                    127 Yorum
-                  </button>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-sm text-gray-600">2.3k görüntülenme</span>
-                </div>
+          
               </div>
 
               {/* 🆕 BEDEN SEÇİMİ SECTİON */}
@@ -481,13 +462,7 @@ const handleAddToCart = () => {
                   </span>
                 )}
                 
-                {/* Installment info */}
-                <div className="mt-3 pt-3 border-t border-orange-100">
-                  <p className="text-sm text-gray-600">
-                    <strong>₺{(currentPrice / 3).toFixed(2)}</strong> x 3 taksit
-                    <span className="text-green-600 ml-2 font-medium">komisyonsuz</span>
-                  </p>
-                </div>
+                
               </div>
 
               {/* Stock status */}
@@ -592,8 +567,8 @@ const handleAddToCart = () => {
                     <FiShield className="text-blue-600" size={20} />
                   </div>
                   <div>
-                    <p className="font-semibold text-blue-800">Güvenli Ödeme</p>
-                    <p className="text-xs text-blue-600">SSL Korumalı</p>
+                    <p className="font-semibold text-blue-800">Kapıda Güvenli Ödeme</p>
+                  
                   </div>
                 </div>
                 

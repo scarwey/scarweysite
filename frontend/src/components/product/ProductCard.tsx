@@ -95,7 +95,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             alt={mainImage?.altText || product.name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             onError={(e) => {
-              console.log('❌ ProductCard image error:', mainImage?.imageUrl);
+              console.log('⌐ ProductCard image error:', mainImage?.imageUrl);
               (e.target as HTMLImageElement).src = 'https://placehold.co/300x300?text=No+Image';
             }}
           />
@@ -165,13 +165,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="p-2 sm:p-4 flex-1 flex flex-col">
           {/* Brand - Sadece desktop'ta göster */}
           {product.brand && (
-            <p className="hidden sm:block text-xs text-purple-600 uppercase tracking-wide mb-1 font-semibold">
+            <p className="hidden sm:block text-xs text-orange-600 uppercase tracking-wide mb-1 font-semibold">
               {product.brand}
             </p>
           )}
           
           {/* 📱 Product Name - Mobilde tek satır */}
-          <h3 className="font-semibold text-sm sm:text-lg mb-2 sm:mb-3 text-gray-800 line-clamp-1 sm:line-clamp-2 group-hover:text-purple-600 transition-colors flex-1">
+          <h3 className="font-semibold text-sm sm:text-lg mb-2 sm:mb-3 text-gray-800 line-clamp-1 sm:line-clamp-2 group-hover:text-orange-600 transition-colors flex-1">
             {product.name}
           </h3>
 
@@ -228,12 +228,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               )}
             </div>
             
-            {/* 📱 MOBİL OPTİMİZE ACTION BUTTON */}
+            {/* 📱 MOBİL OPTİMİZE ACTION BUTTON - Turuncu Renklerde */}
             {totalStock > 0 ? (
               <button
                 onClick={handleAddToCart}
                 disabled={cartLoading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300 text-xs sm:text-sm font-medium transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2"
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-300 text-xs sm:text-sm font-medium transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2"
               >
                 <FiShoppingCart size={12} className="sm:size-4" />
                 <span className="hidden sm:inline">Sepete Ekle</span>
