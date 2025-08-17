@@ -358,7 +358,7 @@ const Home: React.FC = () => {
               <div className="text-center mt-8 md:mt-12">
                 <Link
                   to="/products?sale=true"
-                  className="inline-flex items-center bg-gray-800 text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-lg hover:bg-gray-900 transform hover:scale-105 transition-all duration-300 shadow-xl"
+                  className="inline-flex items-center bg-gray-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-lg hover:bg-gray-700 transform hover:scale-105 transition-all duration-300 shadow-xl"
                 >
                   Tüm İndirimleri Gör
                   <FiArrowRight className="ml-3" />
@@ -453,7 +453,7 @@ const Home: React.FC = () => {
               <div className="text-center mt-8 md:mt-12">
                 <Link
                   to="/products?featured=true"
-                  className="inline-flex items-center bg-gray-800 text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-lg hover:bg-gray-900 transform hover:scale-105 transition-all duration-300 shadow-xl"
+                  className="inline-flex items-center bg-gray-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-lg hover:bg-gray-700 transform hover:scale-105 transition-all duration-300 shadow-xl"
                 >
                   Tüm Öne Çıkanları Gör
                   <FiArrowRight className="ml-3" />

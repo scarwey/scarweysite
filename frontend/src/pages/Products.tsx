@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import * as Icons from 'react-icons/fi';
 import { AppDispatch, RootState } from '../store';
 import { fetchProducts, setFilters } from '../store/slices/productSlice';
-import { fetchCategories } from '../store/slices/categorySlice';
+import { fetchHierarchicalCategories } from '../store/slices/categorySlice';
 import ProductCard from '../components/product/ProductCard';
 
 const FiFilter = Icons.FiFilter as any;
@@ -12,6 +12,7 @@ const FiX = Icons.FiX as any;
 const FiChevronDown = Icons.FiChevronDown as any;
 const FiChevronLeft = Icons.FiChevronLeft as any;
 const FiChevronRight = Icons.FiChevronRight as any;
+const FiChevronUp = Icons.FiChevronUp as any;
 
 // Responsive hook
 const useWindowSize = () => {
@@ -35,16 +36,20 @@ const Products: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false); // 🆕 Desktop filter toggle
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  
+  // Hierarchical kategori state'leri
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
   
   const { products, pagination, filters, isLoading } = useSelector((state: RootState) => state.products);
-  const { categories } = useSelector((state: RootState) => state.categories);
+  const { hierarchicalCategories, isLoadingHierarchical } = useSelector((state: RootState) => state.categories);
   
   // Responsive hook kullanımı
   const { width: windowWidth } = useWindowSize();
 
-  // Local filter states
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  // Local filter states - Multi-select için array'e çevir
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
   const [selectedGender, setSelectedGender] = useState<string>('');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
@@ -59,33 +64,99 @@ const Products: React.FC = () => {
     { value: 'Çocuk', label: 'Çocuk' }
   ];
 
-  // Fetch categories on mount
+  // Kategori expand/collapse toggle
+  const toggleCategoryExpansion = (categoryId: number) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  // Multi-kategori ismi bulma helper
+  const getCategoryName = (categoryId: string, subCategoryId?: string) => {
+    for (const mainCategory of hierarchicalCategories) {
+      if (mainCategory.id.toString() === categoryId) {
+        if (subCategoryId) {
+          // Alt kategori varsa
+          const subCat = mainCategory.subCategories.find(sc => sc.id.toString() === subCategoryId);
+          if (subCat) {
+            return `${mainCategory.name} > ${subCat.name}`;
+          }
+        }
+        return mainCategory.name;
+      }
+    }
+    return 'Bilinmeyen Kategori';
+  };
+
+  // Seçili kategorilerin isimlerini al
+  const getSelectedCategoryNames = () => {
+    const names: Array<{id: string, name: string, type: 'main' | 'sub', parentId?: string}> = [];
+    
+    // Ana kategoriler
+    selectedCategories.forEach(catId => {
+      names.push({
+        id: catId,
+        name: getCategoryName(catId),
+        type: 'main'
+      });
+    });
+    
+    // Alt kategoriler
+    selectedSubCategories.forEach(subCatId => {
+      // Alt kategorinin hangi ana kategoriye ait olduğunu bul
+      for (const mainCategory of hierarchicalCategories) {
+        const subCat = mainCategory.subCategories.find(sc => sc.id.toString() === subCatId);
+        if (subCat) {
+          names.push({
+            id: subCatId,
+            name: getCategoryName(mainCategory.id.toString(), subCatId),
+            type: 'sub',
+            parentId: mainCategory.id.toString()
+          });
+          break;
+        }
+      }
+    });
+    
+    return names;
+  };
+
+  // Fetch hierarchical categories on mount
   useEffect(() => {
-    dispatch(fetchCategories());
+    dispatch(fetchHierarchicalCategories());
   }, [dispatch]);
 
-  // TEK useEffect - Tüm filtreleri handle eder
+  // TEK useEffect - Multi-kategori sistemi
   useEffect(() => {
     // URL parametrelerini al
-    const categoryId = searchParams.get('categoryId') || searchParams.get('category');
+    const categoryIds = searchParams.get('categoryIds')?.split(',').filter(Boolean) || [];
+    const subCategoryIds = searchParams.get('subCategoryIds')?.split(',').filter(Boolean) || [];
     const gender = searchParams.get('gender');
     const search = searchParams.get('search');
     const featured = searchParams.get('featured');
     const sale = searchParams.get('sale');
     const page = parseInt(searchParams.get('page') || '1');
 
-    console.log('🔍 URL Parameters:', { categoryId, gender, search, featured, sale, page });
+    console.log('🔍 URL Parameters:', { categoryIds, subCategoryIds, gender, search, featured, sale, page });
 
     // Local state'i güncelle
-    if (categoryId) setSelectedCategory(categoryId);
+    if (categoryIds.length > 0) setSelectedCategories(categoryIds);
+    if (subCategoryIds.length > 0) setSelectedSubCategories(subCategoryIds);
     if (gender) setSelectedGender(gender);
+
+    // Tüm seçili kategori ID'lerini birleştir
+    const allCategoryIds = [...categoryIds, ...subCategoryIds];
 
     // Tüm filtreleri birleştir
     const allFilters: any = {
       page,
       pageSize: 12,
       sortBy: sortBy as any,
-      categoryId: categoryId ? parseInt(categoryId) : undefined,
+      categoryIds: allCategoryIds.length > 0 ? allCategoryIds.map(id => parseInt(id)) : undefined,
       gender: gender || undefined,
       search: search || undefined,
       featured: featured === 'true' ? true : undefined,
@@ -107,16 +178,101 @@ const Products: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    const newParams = new URLSearchParams(searchParams);
-    if (categoryId) {
-      newParams.set('categoryId', categoryId);
+  // Multi-select ana kategori toggle
+  const toggleMainCategory = (categoryId: string) => {
+    const isCurrentlySelected = selectedCategories.includes(categoryId);
+    
+    if (isCurrentlySelected) {
+      // Ana kategori kaldırılıyorsa
+      const newCategories = selectedCategories.filter(id => id !== categoryId);
+      setSelectedCategories(newCategories);
+      
+      // Bu ana kategorinin alt kategorilerini de kaldır
+      const mainCategory = hierarchicalCategories.find(cat => cat.id.toString() === categoryId);
+      if (mainCategory) {
+        const subCatsToRemove = mainCategory.subCategories.map(sub => sub.id.toString());
+        const newSubCategories = selectedSubCategories.filter(id => !subCatsToRemove.includes(id));
+        setSelectedSubCategories(newSubCategories);
+        updateURL(newCategories, newSubCategories);
+      } else {
+        updateURL(newCategories, selectedSubCategories);
+      }
     } else {
-      newParams.delete('categoryId');
+      // Ana kategori ekleniyor
+      const newCategories = [...selectedCategories, categoryId];
+      setSelectedCategories(newCategories);
+      updateURL(newCategories, selectedSubCategories);
     }
+  };
+
+  // Multi-select alt kategori toggle
+  const toggleSubCategory = (subCategoryId: string, parentCategoryId: string) => {
+    const isCurrentlySelected = selectedSubCategories.includes(subCategoryId);
+    
+    if (isCurrentlySelected) {
+      // Alt kategori kaldırılıyor
+      const newSubCategories = selectedSubCategories.filter(id => id !== subCategoryId);
+      setSelectedSubCategories(newSubCategories);
+      updateURL(selectedCategories, newSubCategories);
+    } else {
+      // Alt kategori ekleniyor
+      const newSubCategories = [...selectedSubCategories, subCategoryId];
+      setSelectedSubCategories(newSubCategories);
+      
+      // Ana kategoriyi de otomatik ekle (eğer yoksa)
+      let newCategories = selectedCategories;
+      if (!selectedCategories.includes(parentCategoryId)) {
+        newCategories = [...selectedCategories, parentCategoryId];
+        setSelectedCategories(newCategories);
+      }
+      
+      updateURL(newCategories, newSubCategories);
+    }
+  };
+
+  // URL güncelleme helper
+  const updateURL = (categories: string[], subCategories: string[]) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    if (categories.length > 0) {
+      newParams.set('categoryIds', categories.join(','));
+    } else {
+      newParams.delete('categoryIds');
+    }
+    
+    if (subCategories.length > 0) {
+      newParams.set('subCategoryIds', subCategories.join(','));
+    } else {
+      newParams.delete('subCategoryIds');
+    }
+    
     newParams.delete('page');
     setSearchParams(newParams);
+  };
+
+  // Tek kategori kaldırma
+  const removeSingleCategory = (categoryId: string, isSubCategory: boolean = false) => {
+    if (isSubCategory) {
+      // Alt kategori siliniyor
+      const newSubCategories = selectedSubCategories.filter(id => id !== categoryId);
+      setSelectedSubCategories(newSubCategories);
+      updateURL(selectedCategories, newSubCategories);
+    } else {
+      // Ana kategori siliniyor
+      const newCategories = selectedCategories.filter(id => id !== categoryId);
+      setSelectedCategories(newCategories);
+      
+      // Bu ana kategorinin alt kategorilerini de sil
+      const mainCategory = hierarchicalCategories.find(cat => cat.id.toString() === categoryId);
+      if (mainCategory) {
+        const subCatsToRemove = mainCategory.subCategories.map(sub => sub.id.toString());
+        const newSubCategories = selectedSubCategories.filter(id => !subCatsToRemove.includes(id));
+        setSelectedSubCategories(newSubCategories);
+        updateURL(newCategories, newSubCategories);
+      } else {
+        updateURL(newCategories, selectedSubCategories);
+      }
+    }
   };
 
   const handleGenderChange = (gender: string) => {
@@ -149,7 +305,8 @@ const Products: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSelectedCategory('');
+    setSelectedCategories([]);
+    setSelectedSubCategories([]);
     setSelectedGender('');
     setMinPrice('');
     setMaxPrice('');
@@ -157,10 +314,94 @@ const Products: React.FC = () => {
     setSearchParams({});
   };
 
+  // Multi-Select Hierarchical Category Component
+  const HierarchicalCategoryFilter = ({ isMobile = false }: { isMobile?: boolean }) => {
+    const namePrefix = isMobile ? 'category-mobile' : 'category';
+    
+    return (
+      <div className="space-y-2">
+        {/* Tüm Kategoriler Seçeneği */}
+        <label className="flex items-center">
+          <input
+            type="radio"
+            name={namePrefix + '-all'}
+            checked={selectedCategories.length === 0 && selectedSubCategories.length === 0}
+            onChange={() => {
+              setSelectedCategories([]);
+              setSelectedSubCategories([]);
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('categoryIds');
+              newParams.delete('subCategoryIds');
+              newParams.delete('page');
+              setSearchParams(newParams);
+            }}
+            className="mr-2 text-orange-600 focus:ring-orange-500"
+          />
+          <span className="text-sm font-medium">Tüm Kategoriler</span>
+        </label>
+
+        {/* Ana Kategoriler ve Alt Kategoriler */}
+        {hierarchicalCategories.map((mainCategory) => (
+          <div key={mainCategory.id} className="space-y-1">
+            {/* Ana Kategori - Multi-Select Checkbox */}
+            <div className="flex items-center">
+              <label className="flex items-center flex-1">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(mainCategory.id.toString())}
+                  onChange={() => toggleMainCategory(mainCategory.id.toString())}
+                  className="mr-2 text-orange-600 focus:ring-orange-500 rounded"
+                />
+                <span className="text-sm font-medium">{mainCategory.name}</span>
+                <span className="ml-2 text-xs text-gray-500">
+                  ({mainCategory.subCategories.filter(sub => selectedSubCategories.includes(sub.id.toString())).length > 0 
+                    ? `${mainCategory.subCategories.filter(sub => selectedSubCategories.includes(sub.id.toString())).length} alt kategori seçili`
+                    : ''})
+                </span>
+              </label>
+
+              {/* Alt kategoriler varsa expand/collapse butonu */}
+              {mainCategory.subCategories.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => toggleCategoryExpansion(mainCategory.id)}
+                  className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                >
+                  {expandedCategories.has(mainCategory.id) ? (
+                    <FiChevronUp size={14} className="text-gray-500" />
+                  ) : (
+                    <FiChevronDown size={14} className="text-gray-500" />
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Alt Kategoriler - Multi-Select */}
+            {mainCategory.subCategories.length > 0 && expandedCategories.has(mainCategory.id) && (
+              <div className="ml-6 space-y-1 border-l-2 border-gray-100 pl-3">
+                {mainCategory.subCategories.map((subCategory) => (
+                  <label key={subCategory.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedSubCategories.includes(subCategory.id.toString())}
+                      onChange={() => toggleSubCategory(subCategory.id.toString(), mainCategory.id.toString())}
+                      className="mr-2 text-orange-600 focus:ring-orange-500 rounded"
+                    />
+                    <span className="text-sm text-gray-700">{subCategory.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
       <div className="flex gap-4 lg:gap-8">
-        {/* 🆕 Desktop Filter Toggle Button */}
+        {/* Desktop Filter Toggle Button */}
         <button
           onClick={() => setIsDesktopFilterOpen(!isDesktopFilterOpen)}
           className="hidden lg:flex fixed top-1/2 left-4 z-30 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50 transition-all duration-300 transform -translate-y-1/2"
@@ -180,7 +421,7 @@ const Products: React.FC = () => {
               <h2 className="text-lg font-semibold">Filtreler</h2>
               <button
                 onClick={clearFilters}
-                className="text-sm text-purple-600 hover:text-purple-700"
+                className="text-sm text-orange-600 hover:text-orange-700"
               >
                 Temizle
               </button>
@@ -200,7 +441,7 @@ const Products: React.FC = () => {
                       value={option.value}
                       checked={selectedGender === option.value}
                       onChange={(e) => handleGenderChange(e.target.value)}
-                      className="mr-2 text-purple-600 focus:ring-purple-500"
+                      className="mr-2 text-orange-600 focus:ring-orange-500"
                     />
                     <span className="text-sm">{option.label}</span>
                   </label>
@@ -208,37 +449,15 @@ const Products: React.FC = () => {
               </div>
             </div>
 
-            {/* Category Filter */}
+            {/* Hierarchical Category Filter */}
             <div className="mb-6">
               <h3 className="font-medium mb-3 flex items-center gap-2">
                 <span>Kategoriler</span>
+                {isLoadingHierarchical && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-orange-600 border-t-transparent"></div>
+                )}
               </h3>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="category"
-                    value=""
-                    checked={selectedCategory === ''}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="mr-2 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-sm">Tüm Kategoriler</span>
-                </label>
-                {categories.map((category) => (
-                  <label key={category.id} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="category"
-                      value={category.id.toString()}
-                      checked={selectedCategory === category.id.toString()}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                      className="mr-2 text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-sm">{category.name}</span>
-                  </label>
-                ))}
-              </div>
+              <HierarchicalCategoryFilter />
             </div>
 
             {/* Price Filter */}
@@ -252,18 +471,18 @@ const Products: React.FC = () => {
                   placeholder="Min"
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
                 <button
                   onClick={handlePriceFilter}
-                  className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition text-sm"
+                  className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition text-sm"
                 >
                   Fiyat Filtrele
                 </button>
@@ -271,8 +490,6 @@ const Products: React.FC = () => {
             </div>
           </div>
         </aside>
-
-        {/* Mobile Filter Button - KALDIRILDI, artık header'da */}
 
         {/* Mobile Filter Drawer */}
         {isMobileFilterOpen && (
@@ -307,7 +524,7 @@ const Products: React.FC = () => {
                           value={option.value}
                           checked={selectedGender === option.value}
                           onChange={(e) => handleGenderChange(e.target.value)}
-                          className="mr-2 text-purple-600 focus:ring-purple-500"
+                          className="mr-2 text-orange-600 focus:ring-orange-500"
                         />
                         <span className="text-sm">{option.label}</span>
                       </label>
@@ -315,37 +532,15 @@ const Products: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Mobile Category Filter */}
+                {/* Mobile Hierarchical Category Filter */}
                 <div className="mb-6">
                   <h3 className="font-medium mb-3 flex items-center gap-2">
                     <span>Kategoriler</span>
+                    {isLoadingHierarchical && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-orange-600 border-t-transparent"></div>
+                    )}
                   </h3>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="category-mobile"
-                        value=""
-                        checked={selectedCategory === ''}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
-                        className="mr-2 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-sm">Tüm Kategoriler</span>
-                    </label>
-                    {categories.map((category) => (
-                      <label key={category.id} className="flex items-center">
-                        <input
-                          type="radio"
-                          name="category-mobile"
-                          value={category.id.toString()}
-                          checked={selectedCategory === category.id.toString()}
-                          onChange={(e) => handleCategoryChange(e.target.value)}
-                          className="mr-2 text-purple-600 focus:ring-purple-500"
-                        />
-                        <span className="text-sm">{category.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <HierarchicalCategoryFilter isMobile={true} />
                 </div>
 
                 {/* Mobile Price Filter */}
@@ -359,21 +554,21 @@ const Products: React.FC = () => {
                       placeholder="Min"
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                     <input
                       type="number"
                       placeholder="Max"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                     <button
                       onClick={() => {
                         handlePriceFilter();
                         setIsMobileFilterOpen(false);
                       }}
-                      className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition text-sm"
+                      className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition text-sm"
                     >
                       Fiyat Filtrele
                     </button>
@@ -402,7 +597,7 @@ const Products: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4 sm:mb-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="min-w-0 flex items-center gap-3">
-                {/* 🆕 Filter Toggle Button - Hem desktop hem mobile */}
+                {/* Filter Toggle Button - Hem desktop hem mobile */}
                 <button
                   onClick={() => {
                     // Desktop için
@@ -433,7 +628,7 @@ const Products: React.FC = () => {
                         </span>
                       )}
                       {searchParams.get('gender') && (
-                        <span className="ml-2 text-purple-600 font-medium">
+                        <span className="ml-2 text-orange-600 font-medium">
                           • {searchParams.get('gender')} kategorisi
                         </span>
                       )}
@@ -447,7 +642,7 @@ const Products: React.FC = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => handleSortChange(e.target.value)}
-                  className="appearance-none bg-white border rounded-lg px-3 py-2 pr-8 text-xs sm:text-sm focus:outline-none focus:border-purple-500 min-w-0"
+                  className="appearance-none bg-white border rounded-lg px-3 py-2 pr-8 text-xs sm:text-sm focus:outline-none focus:border-orange-500 min-w-0"
                 >
                   <option value="name">İsme Göre (A-Z)</option>
                   <option value="price">Fiyata Göre (Düşük-Yüksek)</option>
@@ -462,42 +657,87 @@ const Products: React.FC = () => {
               </div>
             </div>
 
-            {/* Active Filters Display */}
-            {(selectedGender || selectedCategory || searchParams.get('search')) && (
+            {/* Basit ve Temiz Active Filters Display */}
+            {(selectedGender || selectedCategories.length > 0 || selectedSubCategories.length > 0 || searchParams.get('search')) && (
               <div className="mt-3 sm:mt-4 flex flex-wrap gap-1 sm:gap-2">
+                {/* Cinsiyet Filtresi */}
                 {selectedGender && (
-                  <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs sm:text-sm">
+                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs sm:text-sm">
                     {selectedGender}
                     <button
                       onClick={() => handleGenderChange('')}
-                      className="ml-1 hover:text-purple-900"
+                      className="ml-1 hover:text-orange-900"
                     >
                       <FiX size={12} />
                     </button>
                   </span>
                 )}
-                {selectedCategory && categories.find(c => c.id.toString() === selectedCategory) && (
-                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs sm:text-sm">
-                    {categories.find(c => c.id.toString() === selectedCategory)?.name}
+                
+                {/* Ana Kategoriler - Mavi */}
+                {selectedCategories.map(categoryId => (
+                  <span key={`main-${categoryId}`} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs sm:text-sm">
+                    {getCategoryName(categoryId)}
                     <button
-                      onClick={() => handleCategoryChange('')}
+                      onClick={() => removeSingleCategory(categoryId, false)}
                       className="ml-1 hover:text-blue-900"
                     >
                       <FiX size={12} />
                     </button>
                   </span>
-                )}
+                ))}
+                
+                {/* Alt Kategoriler - Mor */}
+                {selectedSubCategories.map(subCategoryId => {
+                  // Alt kategorinin ana kategorisini bul
+                  let parentCategory = '';
+                  for (const mainCat of hierarchicalCategories) {
+                    if (mainCat.subCategories.some(sub => sub.id.toString() === subCategoryId)) {
+                      parentCategory = mainCat.id.toString();
+                      break;
+                    }
+                  }
+                  
+                  return (
+                    <span key={`sub-${subCategoryId}`} className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs sm:text-sm">
+                      {getCategoryName(parentCategory, subCategoryId)}
+                      <button
+                        onClick={() => removeSingleCategory(subCategoryId, true)}
+                        className="ml-1 hover:text-purple-900"
+                      >
+                        <FiX size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
+                
+                {/* Arama Filtresi */}
                 {searchParams.get('search') && (
                   <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs sm:text-sm">
                     "{searchParams.get('search')}"
                   </span>
                 )}
+                
+                {/* Kategori Filtrelerini Temizle - Sadece kategori varsa */}
+                {(selectedCategories.length > 0 || selectedSubCategories.length > 0) && (
+                  <button
+                    onClick={() => {
+                      setSelectedCategories([]);
+                      setSelectedSubCategories([]);
+                      const newParams = new URLSearchParams(searchParams);
+                      newParams.delete('categoryIds');
+                      newParams.delete('subCategoryIds');
+                      newParams.delete('page');
+                      setSearchParams(newParams);
+                    }}
+                    className="text-xs text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-full transition"
+                  >
+                    Kategorileri Temizle
+                  </button>
+                )}
+                
+                {/* Tümünü Temizle */}
                 <button
-                  onClick={() => {
-                    setSelectedGender('');
-                    setSelectedCategory('');
-                    setSearchParams({});
-                  }}
+                  onClick={clearFilters}
                   className="text-xs text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-full transition"
                 >
                   Tümünü Temizle
@@ -509,7 +749,7 @@ const Products: React.FC = () => {
           {/* Products Grid */}
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           ) : products.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-8 sm:p-12 text-center">
@@ -523,21 +763,21 @@ const Products: React.FC = () => {
               </p>
               <button
                 onClick={clearFilters}
-                className="mt-4 text-purple-600 hover:text-purple-700"
+                className="mt-4 text-orange-600 hover:text-orange-700"
               >
                 Filtreleri temizle
               </button>
             </div>
           ) : (
             <>
-              {/* 🚀 MOBİL OPTİMİZE GRİD */}
+              {/* Mobil Optimize Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
-              {/* ✅ Pagination - DÜZELTİLMİŞ VE GELİŞTİRİLMİŞ */}
+              {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="mt-6 sm:mt-8 flex flex-col items-center space-y-4">
                   <nav className="flex items-center space-x-1 sm:space-x-2">
@@ -569,7 +809,7 @@ const Products: React.FC = () => {
                               onClick={() => handlePageChange(i)}
                               className={`px-3 py-2 rounded-lg text-xs ${
                                 currentPage === i
-                                  ? 'bg-purple-600 text-white'
+                                  ? 'bg-orange-600 text-white'
                                   : 'bg-white shadow hover:bg-gray-50'
                               }`}
                             >
@@ -611,7 +851,7 @@ const Products: React.FC = () => {
                               onClick={() => handlePageChange(i)}
                               className={`px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm ${
                                 currentPage === i
-                                  ? 'bg-purple-600 text-white'
+                                  ? 'bg-orange-600 text-white'
                                   : 'bg-white shadow hover:bg-gray-50'
                               }`}
                             >
