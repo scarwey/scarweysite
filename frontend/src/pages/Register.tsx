@@ -361,44 +361,12 @@ const Register: React.FC = () => {
           </div>
         </div>
 
-        {/* Benefits */}
-        <div className="mt-6 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-          <h3 className="font-bold text-gray-800 mb-4 flex items-center">
-            <FiStar className="text-orange-500 mr-2" size={20} />
-            Üye olmanın avantajları
-          </h3>
-          <div className="grid grid-cols-1 gap-3">
-            <div className="flex items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                <FiTruck className="w-4 h-4 text-green-600" />
-              </div>
-              <span className="text-sm font-medium text-green-800">Hızlı ve kolay alışveriş</span>
-            </div>
-            <div className="flex items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                <FiShield className="w-4 h-4 text-blue-600" />
-              </div>
-              <span className="text-sm font-medium text-blue-800">Sipariş takibi ve güvenlik</span>
-            </div>
-            <div className="flex items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                <FiGift className="w-4 h-4 text-purple-600" />
-              </div>
-              <span className="text-sm font-medium text-purple-800">Özel indirimler ve kampanyalar</span>
-            </div>
-            <div className="flex items-center p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                <FiStar className="w-4 h-4 text-orange-600" />
-              </div>
-              <span className="text-sm font-medium text-orange-800">Favori ürünlerinizi kaydedin</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Security Notice */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
-            🔒 Bilgileriniz 256-bit SSL ile şifrelenir ve güvenli şekilde saklanır.
+             Bilgileriniz 256-bit SSL ile şifrelenir ve güvenli şekilde saklanır.
           </p>
         </div>
       </div>

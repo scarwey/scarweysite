@@ -55,6 +55,7 @@ const Products: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name');
 
+
   // Gender seçenekleri
   const genderOptions = [
     { value: '', label: 'Tüm Cinsiyetler' },
@@ -388,6 +389,21 @@ const Products: React.FC = () => {
             )}
           </div>
         ))}
+
+        {/* ✅ SADECE MOBİLE'DA UYGULA BUTONU */}
+{isMobile && (
+  <div className="pt-4 border-t border-gray-200">
+    <button
+      onClick={() => setIsMobileFilterOpen(false)}
+      className="w-full bg-orange-600 text-white py-2.5 rounded-lg hover:bg-orange-700 transition font-semibold"
+    >
+      Uygula
+    </button>
+  </div>
+)}
+
+
+
       </div>
     );
   };

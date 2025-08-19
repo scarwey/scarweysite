@@ -329,7 +329,7 @@ const Login: React.FC = () => {
         {/* Security Notice */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
-            🔒 Giriş yaparak <Link to="/privacy" className="text-orange-600 hover:underline">Gizlilik Politikası</Link> ve{' '}
+             Giriş yaparak <Link to="/privacy" className="text-orange-600 hover:underline">Gizlilik Politikası</Link> ve{' '}
             <Link to="/terms" className="text-orange-600 hover:underline">Kullanım Şartları</Link>'nı kabul etmiş olursunuz.
           </p>
         </div>

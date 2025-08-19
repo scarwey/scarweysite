@@ -605,7 +605,7 @@ const Home: React.FC = () => {
               {
                 icon: FiShield,
                 title: 'Güvenli Ödeme',
-                description: '%100 güvenli'
+                description: 'Kapıda ödeme kolaylığı'
               },
               {
                 icon: FiRefreshCw,
