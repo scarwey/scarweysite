@@ -116,12 +116,12 @@ const Header: React.FC = () => {
      
       {/* ÜST NAVBAR - Sabit pozisyon */}
       <header className="bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-md shadow-xl fixed top-0 left-0 right-0 z-40 border-b border-gray-200/50">
-        {/* Top Banner - Basit Kayan Yazı */}
-        <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white text-center py-2.5 text-sm font-semibold relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />
+        {/* Top Banner - Profesyonel ve Açık */}
+        <div className="bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 text-gray-800 text-center py-2.5 text-sm font-semibold relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
           <div className="relative z-10">
             <div className="whitespace-nowrap" style={{
-              animation: 'marquee 30s linear infinite'
+              animation: 'marquee 10s linear infinite'
             }}>
               <span className="mx-8">Ücretsiz kargo 1500₺ ve üzeri alışverişlerde!</span>
               <span className="mx-8">Hızlı teslimat garantisi!</span>
@@ -159,11 +159,11 @@ const Header: React.FC = () => {
                     placeholder="Ara..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-gray-200 rounded-l-md focus:border-orange-500 focus:outline-none bg-white transition-all min-w-0"
+                    className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-gray-200 rounded-l-md focus:border-gray-400 focus:outline-none bg-white transition-all min-w-0"
                   />
                   <button
                     type="submit"
-                    className="px-2 py-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-r-md hover:from-orange-600 hover:to-red-600 transition-all duration-300 flex-shrink-0"
+                    className="px-2 py-1.5 bg-white border border-l-0 border-gray-200 text-gray-800 rounded-r-md hover:bg-gray-50 transition-colors flex-shrink-0"
                   >
                     <FiSearch size={14} />
                   </button>
@@ -171,15 +171,13 @@ const Header: React.FC = () => {
               </form>
             </div>
 
-            {/* Desktop Profil/Sepet/Favoriler - Üst Kısımda */}
+            {/* Desktop Profil/Sepet/Favoriler - Mobil Navbar Tarzı */}
             <div className="hidden md:flex items-center space-x-2 flex-shrink-0">
-              {/* Profil Dropdown - Desktop */}
+              {/* Profil Dropdown - Desktop - Mobil Tarzı */}
               {isAuthenticated ? (
                 <div className="relative group">
-                  <button className="flex items-center space-x-1 px-2 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all duration-300">
-                    <div className="w-6 h-6 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
-                      <FiUser className="text-white" size={12} />
-                    </div>
+                  <button className="flex items-center space-x-1 px-2 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-300">
+                    <FiUser className="text-gray-800" size={16} />
                     <span className="text-xs font-semibold text-gray-700 hidden lg:block">{user?.firstName}</span>
                     <FiChevronDown className="text-gray-400" size={12} />
                   </button>
@@ -228,24 +226,24 @@ const Header: React.FC = () => {
                 </div>
               )}
 
-              {/* Favoriler - Desktop */}
-              <Link to="/wishlist" className="relative p-2 bg-white border border-gray-200 rounded-lg hover:border-pink-300 hover:shadow-md transition-all duration-300 group">
-                <FiHeart className="text-gray-600 group-hover:text-pink-500 transition-colors" size={16} />
+              {/* Favoriler - Desktop - Mobil Navbar Tarzı */}
+              <Link to="/wishlist" className="relative p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-300">
+                <FiHeart className="text-gray-800" size={16} />
                 {wishlistItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
                     {wishlistItems.length}
                   </span>
                 )}
               </Link>
 
-              {/* Sepet - Desktop */}
+              {/* Sepet - Desktop - Mobil Navbar Tarzı */}
               <Link
                 to="/cart"
-                className="relative p-2 bg-white border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all duration-300 group"
+                className="relative p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-300"
               >
-                <FiShoppingCart className="text-gray-600 group-hover:text-green-500 transition-colors" size={16} />
+                <FiShoppingCart className="text-gray-800" size={16} />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
                     {cartItemCount}
                   </span>
                 )}
