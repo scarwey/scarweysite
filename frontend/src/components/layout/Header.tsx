@@ -31,6 +31,19 @@ const Header: React.FC = () => {
   useEffect(() => {
     debugAuth();
     dispatch(fetchCategories());
+    
+    // Dışarıya tıklayınca profil menüsünü kapat
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.profile-dropdown-container')) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [dispatch]);
 
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -435,33 +448,33 @@ const Header: React.FC = () => {
         </div>
       </header>
 
-      {/* ALT NAVBAR - Mobil Tab Bar (Kompakt ve Daraltılmış) */}
+      {/* ALT NAVBAR - Mobil Tab Bar (Eşit Alanlar + Dışarı Tıklama) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-40">
-        <div className="flex items-center justify-around py-1.5">
-          {/* Tüm Ürünler Tab - İlk sıraya taşındı */}
-          <Link to="/products" className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition-all duration-300">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
-              <FiPackage className="text-white" size={12} />
-            </div>
-            <span className="text-xs font-semibold text-gray-700">Ürünler</span>
+        <div className="grid grid-cols-5 py-2">
+          {/* 1. Ana Sayfa - Eşit alan */}
+          <Link to="/" className="flex flex-col items-center gap-1 px-1 py-1">
+            <FiHome className="text-black" size={20} />
+            <span className="text-xs font-medium text-black text-center leading-tight">Ana Sayfa</span>
           </Link>
 
-          {/* Profil Tab - İkinci sıraya taşındı */}
+          {/* 2. Tüm Ürünler - Eşit alan */}
+          <Link to="/products" className="flex flex-col items-center gap-1 px-1 py-1">
+            <FiPackage className="text-black" size={20} />
+            <span className="text-xs font-medium text-black text-center leading-tight">Ürünler</span>
+          </Link>
+
+          {/* 3. Profil - ORTADA - Eşit alan */}
           {isAuthenticated ? (
-            <div className="relative">
+            <div className="relative profile-dropdown-container">
               <button 
                 onClick={toggleProfileMenu}
-                className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition-all duration-300"
+                className="flex flex-col items-center gap-1 px-1 py-1 w-full"
               >
-                <div className="w-6 h-6 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
-                  <FiUser className="text-white" size={12} />
-                </div>
-                <span className="text-xs font-semibold text-gray-700">
-                  {user?.firstName?.slice(0, 4) || 'Profil'}
-                </span>
+                <FiUser className="text-black" size={20} />
+                <span className="text-xs font-medium text-black text-center leading-tight">Profil</span>
               </button>
 
-              {/* Giriş yapmış kullanıcı için dropdown - Düzeltilmiş konumlandırma */}
+              {/* Profil Dropdown */}
               {isProfileMenuOpen && (
                 <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-56 bg-white rounded-lg shadow-2xl border border-gray-200 z-[60] overflow-hidden">
                   <div className="px-3 py-3 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-red-50">
@@ -509,41 +522,39 @@ const Header: React.FC = () => {
               )}
             </div>
           ) : (
-            <Link to="/login" className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition-all duration-300">
-              <div className="w-6 h-6 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
-                <FiUser className="text-white" size={12} />
-              </div>
-              <span className="text-xs font-semibold text-gray-700">Giriş</span>
+            <Link to="/login" className="flex flex-col items-center gap-1 px-1 py-1">
+              <FiUser className="text-black" size={20} />
+              <span className="text-xs font-medium text-black text-center leading-tight">Giriş</span>
             </Link>
           )}
 
-          {/* Favoriler Tab */}
-          <Link to="/wishlist" className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition-all duration-300 relative">
-            <div className="w-6 h-6 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full flex items-center justify-center shadow-sm">
-              <FiHeart className="text-white" size={12} />
+          {/* 4. Favoriler - Eşit alan */}
+          <Link to="/wishlist" className="flex flex-col items-center gap-1 px-1 py-1 relative">
+            <div className="relative">
+              <FiHeart className="text-black" size={20} />
+              {wishlistItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {wishlistItems.length}
+                </span>
+              )}
             </div>
-            <span className="text-xs font-semibold text-gray-700">Favoriler</span>
-            {wishlistItems.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-pink-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold animate-pulse">
-                {wishlistItems.length}
-              </span>
-            )}
+            <span className="text-xs font-medium text-black text-center leading-tight">Favoriler</span>
           </Link>
 
-          {/* Sepet Tab */}
+          {/* 5. Sepet - Eşit alan */}
           <button
             onClick={() => dispatch(toggleCart())}
-            className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition-all duration-300 relative"
+            className="flex flex-col items-center gap-1 px-1 py-1 relative"
           >
-            <div className="w-6 h-6 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-sm">
-              <FiShoppingCart className="text-white" size={12} />
+            <div className="relative">
+              <FiShoppingCart className="text-black" size={20} />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {cartItemCount}
+                </span>
+              )}
             </div>
-            <span className="text-xs font-semibold text-gray-700">Sepet</span>
-            {cartItemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-green-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold animate-pulse">
-                {cartItemCount}
-              </span>
-            )}
+            <span className="text-xs font-medium text-black text-center leading-tight">Sepet</span>
           </button>
         </div>
       </nav>
