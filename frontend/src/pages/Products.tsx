@@ -206,29 +206,23 @@ const Products: React.FC = () => {
   };
 
   // Multi-select alt kategori toggle
-  const toggleSubCategory = (subCategoryId: string, parentCategoryId: string) => {
-    const isCurrentlySelected = selectedSubCategories.includes(subCategoryId);
+ const toggleSubCategory = (subCategoryId: string, parentCategoryId: string) => {
+  const isCurrentlySelected = selectedSubCategories.includes(subCategoryId);
+  
+  if (isCurrentlySelected) {
+    // Alt kategori kaldırılıyor
+    const newSubCategories = selectedSubCategories.filter(id => id !== subCategoryId);
+    setSelectedSubCategories(newSubCategories);
+    updateURL(selectedCategories, newSubCategories);
+  } else {
+    // ✅ Alt kategori ekleniyor - ANA KATEGORİYİ OTOMATIK EKLEME!
+    const newSubCategories = [...selectedSubCategories, subCategoryId];
+    setSelectedSubCategories(newSubCategories);
     
-    if (isCurrentlySelected) {
-      // Alt kategori kaldırılıyor
-      const newSubCategories = selectedSubCategories.filter(id => id !== subCategoryId);
-      setSelectedSubCategories(newSubCategories);
-      updateURL(selectedCategories, newSubCategories);
-    } else {
-      // Alt kategori ekleniyor
-      const newSubCategories = [...selectedSubCategories, subCategoryId];
-      setSelectedSubCategories(newSubCategories);
-      
-      // Ana kategoriyi de otomatik ekle (eğer yoksa)
-      let newCategories = selectedCategories;
-      if (!selectedCategories.includes(parentCategoryId)) {
-        newCategories = [...selectedCategories, parentCategoryId];
-        setSelectedCategories(newCategories);
-      }
-      
-      updateURL(newCategories, newSubCategories);
-    }
-  };
+    // ✅ Sadece alt kategoriler ile URL güncelle
+    updateURL(selectedCategories, newSubCategories);
+  }
+};
 
   // URL güncelleme helper
   const updateURL = (categories: string[], subCategories: string[]) => {
