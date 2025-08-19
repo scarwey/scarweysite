@@ -27,7 +27,7 @@ namespace ECommerce.API.Controllers
         public async Task<ActionResult<object>> GetProfile()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
+
             var user = await _context.Users
                 .Where(u => u.Id == userId)
                 .Select(u => new
@@ -80,26 +80,41 @@ namespace ECommerce.API.Controllers
             return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
         }
 
-        // PUT: api/user/change-password
+        // PUT: api/user/change-password - DÜZELTİLMİŞ
         [HttpPut("change-password")]
         public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordModel model)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-
-            if (user == null)
+            try
             {
-                return NotFound();
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var user = await _userManager.FindByIdAsync(userId.ToString());
+
+                if (user == null)
+                {
+                    return NotFound("Kullanıcı bulunamadı");
+                }
+
+                // Mevcut şifreyi kontrol et
+                var checkPassword = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
+                if (!checkPassword)
+                {
+                    return BadRequest("Mevcut şifre yanlış");
+                }
+
+                // Yeni şifreyi ayarla
+                var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    return Ok(new { message = "Şifre başarıyla değiştirildi" });
+                }
+
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
             }
-
-            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-
-            if (result.Succeeded)
+            catch (Exception ex)
             {
-                return Ok(new { message = "Password changed successfully" });
+                return StatusCode(500, "Şifre değiştirilemedi");
             }
-
-            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
         }
 
         // GET: api/user/addresses

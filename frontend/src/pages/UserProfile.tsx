@@ -108,21 +108,50 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handlePasswordChange = async (data: PasswordForm) => {
-    try {
-      setLoading(true);
-      await api.post('/user/change-password', {
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword
-      });
-      setMessage({ type: 'success', text: 'Şifreniz başarıyla değiştirildi.' });
-      passwordForm.reset();
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.' });
-    } finally {
-      setLoading(false);
+// UserProfile.tsx'te handlePasswordChange fonksiyonunu bul ve şu şekilde değiştir:
+
+const handlePasswordChange = async (data: PasswordForm) => {
+  try {
+    setLoading(true);
+    setMessage(null);
+    
+    console.log('🔄 Password change attempt');
+    
+    // ✅ PUT method kullan (backend ile uyumlu)
+    const response = await api.put('/user/change-password', {
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword
+    });
+    
+    console.log('✅ Password change success:', response.data);
+    setMessage({ type: 'success', text: 'Şifreniz başarıyla değiştirildi.' });
+    passwordForm.reset();
+    
+  } catch (error: any) {
+    console.error('❌ Password change error:', error.response?.data || error.message);
+    
+    let errorMessage = 'Şifre değiştirilemedi.';
+    
+    if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+      // Backend'ten gelen error array'i
+      errorMessage = error.response.data.errors.join(', ');
+    } else if (typeof error.response?.data === 'string') {
+      // String error message
+      errorMessage = error.response.data;
+    } else if (error.response?.data?.message) {
+      // Object içinde message
+      errorMessage = error.response.data.message;
+    } else if (error.response?.status === 400) {
+      errorMessage = 'Mevcut şifreniz yanlış veya yeni şifre uygun değil.';
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
     }
-  };
+    
+    setMessage({ type: 'error', text: errorMessage });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAddressSubmit = async (data: AddressForm) => {
     try {
