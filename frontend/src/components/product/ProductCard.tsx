@@ -162,7 +162,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
         
         {/* 📱 MOBİL OPTİMİZE CONTENT AREA */}
-        <div className="p-2 sm:p-4 flex-1 flex flex-col">
+        <div className="p-2 sm:p-3 flex-1 flex flex-col">
           {/* Brand - Sadece desktop'ta göster */}
           {product.brand && (
             <p className="hidden sm:block text-xs text-orange-600 uppercase tracking-wide mb-1 font-semibold">
@@ -171,13 +171,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
           
           {/* 📱 Product Name - Mobilde tek satır */}
-          <h3 className="font-semibold text-sm sm:text-lg mb-2 sm:mb-3 text-gray-800 line-clamp-1 sm:line-clamp-2 group-hover:text-orange-600 transition-colors flex-1">
-            {product.name}
-          </h3>
+         <h3 className="font-medium text-xs sm:text-sm mb-1 text-gray-800 group-hover:text-orange-600 transition-colors flex-1 break-words overflow-hidden"
+    style={{ 
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+      maxHeight: '2.5rem',
+      lineHeight: '1.25rem'
+    }}>
+  {product.name}
+</h3>
 
           {/* 📱 Size Info - Mobilde daha kompakt */}
           {product.hasSizes && product.variants && product.variants.length > 0 && (
-            <div className="mb-2 sm:mb-3">
+            <div className="mb-1 sm:mb-2">
               <div className="flex items-center gap-1 sm:gap-2">
                 <span className="text-[10px] sm:text-xs text-gray-500">Bedenler:</span>
                 <div className="flex gap-0.5 sm:gap-1">
@@ -205,16 +212,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           
           {/* 📱 PRICE SECTION - Mobilde kompakt */}
           <div className="mt-auto">
-            <div className="mb-2 sm:mb-3">
+            <div className="mb-1 sm:mb-2">
               {product.discountPrice ? (
                 <div className="space-y-0.5 sm:space-y-1">
                   <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-sm sm:text-xl font-bold text-red-600">
-                      ₺{product.discountPrice.toFixed(2)}
-                    </span>
-                    <span className="text-gray-400 line-through text-xs sm:text-sm">
-                      ₺{product.price.toFixed(2)}
-                    </span>
+                   <span className="text-sm sm:text-base font-bold text-red-600">
+  ₺{product.discountPrice.toFixed(2)}
+</span>
+                  <span className="text-sm sm:text-base font-bold text-gray-800">
+  ₺{product.price.toFixed(2)}
+</span>
                   </div>
                   {/* Tasarruf bilgisi sadece desktop'ta */}
                   <p className="hidden sm:block text-xs text-green-600 font-medium">
@@ -262,17 +269,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </p>
           </div>
 
-          {/* 📱 MOBİL WISHLIST BUTTON - Sadece mobilde görünür */}
-          <button
-            onClick={handleToggleWishlist}
-            className={`sm:hidden absolute top-2 right-2 p-1.5 rounded-full shadow-lg transition-all duration-300 ${
-              isInWishlist 
-                ? 'bg-red-500 text-white' 
-                : 'bg-white/90 backdrop-blur-sm text-gray-700'
-            }`}
-          >
-            <FiHeart size={12} className={isInWishlist ? 'fill-current' : ''} />
-          </button>
+        
+          {/* 📱 MOBİL WISHLIST BUTTON - HER ZAMAN GÖRÜNÜR */}
+{/* 📱 MOBİL WISHLIST BUTTON - HER ZAMAN GÖRÜNÜR */}
+<button
+  onClick={handleToggleWishlist}
+  className={`absolute top-2 right-2 p-1.5 rounded-full shadow-lg transition-all duration-300 z-20 ${
+    isInWishlist 
+      ? 'bg-red-500 text-white' 
+      : 'bg-white/90 backdrop-blur-sm text-gray-700'
+  }`}
+>
+  <FiHeart size={12} className={isInWishlist ? 'fill-current' : ''} />
+</button>
         </div>
       </div>
     </Link>

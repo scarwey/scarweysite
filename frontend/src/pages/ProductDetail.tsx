@@ -39,8 +39,9 @@ const ProductDetail: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
   const [isZoomed, setIsZoomed] = useState(false);
-  
-  // 🆕 YENİ STATE'LER - BEDEN SEÇİMİ İÇİN
+  const [showImageModal, setShowImageModal] = useState(false);
+
+  // Beden seçimi için state'ler
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [variantPrice, setVariantPrice] = useState<number>(0);
   const [showSizeError, setShowSizeError] = useState(false);
@@ -51,20 +52,24 @@ const ProductDetail: React.FC = () => {
   const getImageUrl = (imageUrl?: string) => {
     if (!imageUrl) return 'https://placehold.co/600x600?text=No+Image';
     if (imageUrl.startsWith('http')) return imageUrl;
-      return `https://scarwey.onrender.com${imageUrl}`;
+    return `https://scarwey.onrender.com${imageUrl}`;
   };
 
   useEffect(() => {
-    fetchProduct();
+    if (id) {
+      fetchProduct();
+    }
   }, [id]);
 
   const fetchProduct = async () => {
+    if (!id) return;
+    
     try {
       setLoading(true);
       const response = await api.get<Product>(`/products/${id}`);
       setProduct(response.data);
       
-      // 🆕 Eğer ürünün bedenleri varsa ilk bedeni seç
+      // Eğer ürünün bedenleri varsa ilk bedeni seç
       if (response.data.hasSizes && response.data.variants && response.data.variants.length > 0) {
         const firstVariant = response.data.variants.find(v => v.isAvailable && v.stockQuantity > 0);
         if (firstVariant) {
@@ -80,7 +85,7 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // 🆕 Variant fiyatını getir
+  // Variant fiyatını getir
   const fetchVariantPrice = async (variantId: number) => {
     try {
       const response = await api.get<{ price: number }>(`/products/variants/${variantId}/price`);
@@ -90,7 +95,7 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // 🆕 Beden seçimi
+  // Beden seçimi
   const handleVariantChange = async (variant: ProductVariant) => {
     setSelectedVariant(variant);
     setShowSizeError(false);
@@ -104,60 +109,31 @@ const ProductDetail: React.FC = () => {
     await fetchVariantPrice(variant.id);
   };
 
-  // 🆕 Güncellenmiş sepete ekleme
-const handleAddToCart = () => {
-  if (!product) return;
+  // Güncellenmiş sepete ekleme
+  const handleAddToCart = () => {
+    if (!product) return;
 
-  // 🔍 DEBUG - Beden durumu
-  console.log('🔍 PRODUCT DEBUG:', {
-    productId: product.id,
-    productName: product.name,
-    hasSizes: product.hasSizes,
-    variants: product.variants,
-    selectedVariant: selectedVariant,
-    selectedVariantId: selectedVariant?.id,
-    showSizeError: showSizeError
-  });
-
-  // Eğer ürünün bedenleri varsa beden seçimi zorunlu
-  if (product.hasSizes && product.variants && product.variants.length > 0) {
-    console.log('🔍 SIZE CHECK:', {
-      hasSizes: true,
-      variantsCount: product.variants.length,
-      selectedVariant: selectedVariant,
-      willShowError: !selectedVariant
-    });
-    
-    if (!selectedVariant) {
-      setShowSizeError(true);
-      return;
+    // Eğer ürünün bedenleri varsa beden seçimi zorunlu
+    if (product.hasSizes && product.variants && product.variants.length > 0) {
+      if (!selectedVariant) {
+        setShowSizeError(true);
+        return;
+      }
+      
+      // Variant bazında sepete ekle
+      dispatch(addToCart({ 
+        productId: product.id, 
+        productVariantId: selectedVariant.id,
+        quantity 
+      }));
+    } else {
+      // Normal ürün - variant olmadan sepete ekle
+      dispatch(addToCart({ 
+        productId: product.id, 
+        quantity 
+      }));
     }
-    
-    console.log('📤 ADDING WITH VARIANT:', { 
-      productId: product.id, 
-      productVariantId: selectedVariant.id,
-      quantity 
-    });
-    
-    // Variant bazında sepete ekle
-    dispatch(addToCart({ 
-      productId: product.id, 
-      productVariantId: selectedVariant.id,
-      quantity 
-    }));
-  } else {
-    console.log('📤 ADDING WITHOUT VARIANT:', { 
-      productId: product.id, 
-      quantity 
-    });
-    
-    // Normal ürün - variant olmadan sepete ekle
-    dispatch(addToCart({ 
-      productId: product.id, 
-      quantity 
-    }));
-  }
-};
+  };
 
   const handleToggleWishlist = () => {
     if (product) {
@@ -180,7 +156,7 @@ const handleAddToCart = () => {
     return 0;
   };
 
-  // 🆕 Güncel fiyatı hesapla (variant fiyatı varsa onu kullan)
+  // Güncel fiyatı hesapla (variant fiyatı varsa onu kullan)
   const getCurrentPrice = () => {
     if (selectedVariant && variantPrice > 0) {
       return variantPrice;
@@ -188,7 +164,7 @@ const handleAddToCart = () => {
     return product?.discountPrice || product?.price || 0;
   };
 
-  // 🆕 Güncel stok miktarını hesapla
+  // Güncel stok miktarını hesapla
   const getCurrentStock = () => {
     if (selectedVariant) {
       return selectedVariant.stockQuantity;
@@ -209,8 +185,12 @@ const handleAddToCart = () => {
       }
     } else {
       // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href);
-      // Show toast notification here
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        // Show toast notification here
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+      }
     }
   };
 
@@ -294,7 +274,7 @@ const handleAddToCart = () => {
                     src={images[selectedImage].imageUrl}
                     alt={images[selectedImage].altText || product.name}
                     className={`w-full h-full object-contain transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in hover:scale-105'}`}
-                    onClick={() => setIsZoomed(!isZoomed)}
+                    onClick={() => setShowImageModal(true)}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/600x600?text=No+Image';
                     }}
@@ -310,12 +290,6 @@ const handleAddToCart = () => {
                     {currentStock < 10 && currentStock > 0 && (
                       <span className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                         SON {currentStock} ADET!
-                      </span>
-                    )}
-                    {/* 🆕 Gender Badge */}
-                    {product.gender && (
-                      <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                        {product.gender}
                       </span>
                     )}
                   </div>
@@ -385,14 +359,18 @@ const handleAddToCart = () => {
                     {product.brand}
                   </p>
                 )}
-                <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-4">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 leading-tight mb-4 break-words overflow-hidden" 
+                    style={{ 
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      maxHeight: '3rem'
+                    }}>
                   {product.name}
                 </h1>
-                
-          
               </div>
 
-              {/* 🆕 BEDEN SEÇİMİ SECTİON */}
+              {/* Beden Seçimi */}
               {product.hasSizes && product.variants && product.variants.length > 0 && (
                 <div className="border-2 border-gray-100 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -445,7 +423,7 @@ const handleAddToCart = () => {
                 {product.discountPrice ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-4xl font-bold text-red-600">
+                      <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
                         ₺{currentPrice.toFixed(2)}
                       </span>
                       <span className="text-lg text-gray-400 line-through">
@@ -461,8 +439,6 @@ const handleAddToCart = () => {
                     ₺{currentPrice.toFixed(2)}
                   </span>
                 )}
-                
-                
               </div>
 
               {/* Stock status */}
@@ -518,34 +494,35 @@ const handleAddToCart = () => {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex gap-3">
+                <div className="flex gap-2 sm:gap-3">
                   <button
                     onClick={handleAddToCart}
                     disabled={cartLoading || currentStock === 0}
-                    className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-lg"
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 shadow-lg"
                   >
-                    <FiShoppingCart size={24} />
-                    {cartLoading ? 'Ekleniyor...' : 'Sepete Ekle'}
+                    <FiShoppingCart size={18} className="sm:size-6" />
+                    <span className="hidden xs:inline">{cartLoading ? 'Ekleniyor...' : 'Sepete Ekle'}</span>
+                    <span className="xs:hidden">Sepet</span>
                   </button>
 
                   <button 
                     onClick={handleToggleWishlist}
-                    className={`p-4 border-2 rounded-xl transition-all duration-300 hover:scale-105 ${
+                    className={`p-2.5 sm:p-3 border-2 rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-105 ${
                       isInWishlist 
                         ? 'bg-red-50 border-red-200 text-red-600' 
                         : 'border-gray-200 hover:border-red-200 hover:bg-red-50'
                     }`}
                     title={isInWishlist ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
                   >
-                    <FiHeart size={24} className={isInWishlist ? 'fill-current' : ''} />
+                    <FiHeart size={18} className={`sm:size-6 ${isInWishlist ? 'fill-current' : ''}`} />
                   </button>
 
                   <button 
                     onClick={handleShare}
-                    className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-200 hover:bg-blue-50 transition-all duration-300 hover:scale-105"
+                    className="p-2.5 sm:p-3 border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-blue-200 hover:bg-blue-50 transition-all duration-300 hover:scale-105"
                     title="Paylaş"
                   >
-                    <FiShare2 size={24} />
+                    <FiShare2 size={18} className="sm:size-6" />
                   </button>
                 </div>
               </div>
@@ -567,8 +544,8 @@ const handleAddToCart = () => {
                     <FiShield className="text-blue-600" size={20} />
                   </div>
                   <div>
-                    <p className="font-semibold text-blue-800">Kapıda Güvenli Ödeme</p>
-                  
+                    <p className="font-semibold text-blue-800">Güvenli Ödeme</p>
+                    <p className="text-xs text-blue-600">Kapıda ödeme</p>
                   </div>
                 </div>
                 
@@ -593,10 +570,6 @@ const handleAddToCart = () => {
                   <FiCheck className="inline text-green-500 mr-1" size={14} />
                   Bugün sipariş verirseniz <strong>yarın kargoda</strong>
                 </p>
-               {/* <p className="text-sm text-gray-600">
-                  <FiGift className="inline text-purple-500 mr-1" size={14} />
-                  Hediye paketi seçeneği mevcut
-                </p>*/} 
               </div>
             </div>
 
@@ -624,20 +597,9 @@ const handleAddToCart = () => {
                   >
                     Ürün Özellikleri
                   </button>
-                  {/* 
-                  <button
-                    onClick={() => setActiveTab('reviews')}
-                    className={`py-4 border-b-2 font-semibold transition-colors ${
-                      activeTab === 'reviews'
-                        ? 'text-orange-600 border-orange-600'
-                        : 'text-gray-500 border-transparent hover:text-gray-700'
-                    }`}
-                  >
-                    Değerlendirmeler (127)
-                  </button>*/}
+                 
                 </nav>
               </div>
-              
 
               <div className="p-8">
                 {activeTab === 'description' && (
@@ -705,6 +667,63 @@ const handleAddToCart = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            {/* Kapat Butonu */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-12 right-0 text-white text-xl hover:text-gray-300 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center"
+            >
+              ✕
+            </button>
+            
+            {/* Resim */}
+            <img
+              src={images[selectedImage].imageUrl}
+              alt={images[selectedImage].altText || product.name}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {/* Navigation Arrows */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage(prev => prev > 0 ? prev - 1 : images.length - 1);
+                  }}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70"
+                >
+                  <FiChevronLeft size={24} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage(prev => prev < images.length - 1 ? prev + 1 : 0);
+                  }}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70"
+                >
+                  <FiChevronRight size={24} />
+                </button>
+              </>
+            )}
+            
+            {/* Image Counter */}
+            {images.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 text-white px-4 py-2 rounded-full text-sm">
+                {selectedImage + 1} / {images.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
