@@ -9,7 +9,8 @@ const UserLayout: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <CartDrawer />
-      <main className="mt-4">
+      {/* ✅ mt-4 kaldırıldı - Hero section için boşluk yok */}
+      <main className="pb-20 md:pb-0">
         <Outlet />
       </main>
     </div>

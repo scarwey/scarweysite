@@ -99,8 +99,8 @@ const Header: React.FC = () => {
         `}
       </style>
       
-      {/* Sabit navbar için body padding */}
-      <div className="pt-32 md:pt-40"></div>
+     
+     
       {/* ÜST NAVBAR - Sabit pozisyon */}
       <header className="bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-md shadow-xl fixed top-0 left-0 right-0 z-40 border-b border-gray-200/50">
         {/* Top Banner - Basit Kayan Yazı */}
