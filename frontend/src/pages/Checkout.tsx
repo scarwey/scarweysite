@@ -12,7 +12,7 @@ const FiCreditCard = Icons.FiCreditCard as any;
 const FiMapPin = Icons.FiMapPin as any;
 const FiCheck = Icons.FiCheck as any;
 const FiChevronRight = Icons.FiChevronRight as any;
-const FiDollarSign = Icons.FiDollarSign as any;
+
 
 interface CheckoutForm {
   // Address fields
@@ -268,13 +268,31 @@ const Checkout: React.FC = () => {
                   )}
 
                   {/* New Address Form */}
-                  {(useNewAddress || savedAddresses.length === 0) && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Ad *
-                          </label>
+{(useNewAddress || savedAddresses.length === 0) && (
+  <div className="space-y-4">
+    {/* ✅ ADRES BAŞLIĞI - HER ZAMAN GÖSTER */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Adres Başlığı *
+      </label>
+      <input
+        {...register('addressTitle', { 
+          required: 'Adres başlığı zorunludur',
+          value: 'Ev' // Varsayılan değer
+        })}
+        placeholder="Adres başlığı (örn: Ev, İş, Ofis)"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+      />
+      {errors.addressTitle && (
+        <p className="text-red-500 text-sm mt-1">{errors.addressTitle.message}</p>
+      )}
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Ad *
+        </label>
                           <input
                             {...register('firstName', { required: 'Ad zorunludur' })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -376,27 +394,21 @@ const Checkout: React.FC = () => {
                         </div>
                       </div>
 
-                      {user && (
-                        <div>
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              {...register('saveAddress')}
-                              className="mr-2 text-purple-600 focus:ring-purple-500"
-                            />
-                            <span className="text-sm">Bu adresi kaydet</span>
-                          </label>
-                          {saveAddress && (
-                            <input
-                              {...register('addressTitle')}
-                              placeholder="Adres başlığı (örn: Ev, İş)"
-                              className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                       {/* Kaydet checkbox'ı en sona */}
+    {user && (
+      <div>
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            {...register('saveAddress')}
+            className="mr-2 text-purple-600 focus:ring-purple-500"
+          />
+          <span className="text-sm">Bu adresi kaydet</span>
+        </label>
+      </div>
+    )}
+  </div>
+)}
 
                   <div className="mt-6 flex justify-end">
                     <button
@@ -414,7 +426,7 @@ const Checkout: React.FC = () => {
               {step === 2 && (
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-xl font-bold mb-6 flex items-center">
-                    <FiDollarSign className="mr-2 text-purple-600" />
+                  
                     Ödeme Bilgileri
                   </h2>
 
@@ -436,7 +448,6 @@ const Checkout: React.FC = () => {
                             className="mr-3 text-purple-600"
                           />
                           <div className="flex items-center">
-                            <FiDollarSign className="mr-3 text-purple-600" size={24} />
                             <div>
                               <p className="font-medium text-purple-800">Kapıda Ödeme</p>
                               <p className="text-sm text-purple-600">Ürününüz teslim edilirken nakit olarak ödeyebilirsiniz</p>
@@ -491,17 +502,26 @@ const Checkout: React.FC = () => {
                   <div className="mb-6">
                     <h3 className="font-semibold mb-2">Teslimat Adresi</h3>
                     <div className="p-4 bg-gray-50 rounded-lg">
-                      {selectedAddress ? (
-                        <>
-                          <p className="font-medium">{selectedAddress.title}</p>
-                          <p>{selectedAddress.firstName} {selectedAddress.lastName}</p>
-                          <p>{selectedAddress.addressLine1}</p>
-                          <p>{selectedAddress.city}, {selectedAddress.postalCode}</p>
-                          <p>{selectedAddress.phone}</p>
-                        </>
-                      ) : (
-                        <p>Yeni adres bilgileri</p>
-                      )}
+                    
+{selectedAddress && !useNewAddress ? (
+  <>
+    <p className="font-medium">{selectedAddress.title}</p>
+    <p>{selectedAddress.firstName} {selectedAddress.lastName}</p>
+    <p>{selectedAddress.addressLine1}</p>
+    {selectedAddress.addressLine2 && <p>{selectedAddress.addressLine2}</p>}
+    <p>{selectedAddress.city}, {selectedAddress.postalCode}</p>
+    <p>{selectedAddress.phone}</p>
+  </>
+) : (
+  <>
+    <p className="font-medium">{watch('addressTitle') || 'Yeni Adres'}</p>
+    <p>{watch('firstName')} {watch('lastName')}</p>
+    <p>{watch('addressLine1')}</p>
+    {watch('addressLine2') && <p>{watch('addressLine2')}</p>}
+    <p>{watch('city')}, {watch('postalCode')}</p>
+    <p>{watch('phone')}</p>
+  </>
+)}
                     </div>
                   </div>
 
@@ -510,7 +530,7 @@ const Checkout: React.FC = () => {
                     <h3 className="font-semibold mb-2">Ödeme Yöntemi</h3>
                     <div className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center">
-                        <FiDollarSign className="mr-2 text-purple-600" />
+                      
                         <p className="font-medium">Kapıda Ödeme</p>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
@@ -570,7 +590,7 @@ const Checkout: React.FC = () => {
                         {item.productVariant && (
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-                              📏 Beden: {item.productVariant.sizeDisplay || item.productVariant.size}
+                               Beden: {item.productVariant.sizeDisplay || item.productVariant.size}
                             </span>
                             {/* Fiyat farkı varsa göster */}
                             {item.productVariant.priceModifier != null && item.productVariant.priceModifier !== 0 && (
@@ -632,7 +652,7 @@ const Checkout: React.FC = () => {
                     <span className="text-purple-600">₺{total.toFixed(2)}</span>
                   </div>
                   <div className="mt-2 text-sm text-gray-600 text-center">
-                    💰 Kapıda ödeme ile güvenli alışveriş
+                     Kapıda ödeme ile güvenli alışveriş
                   </div>
                   <div className="mt-1 text-xs text-gray-500 text-center">
                     KDV dahil fiyatlardır
