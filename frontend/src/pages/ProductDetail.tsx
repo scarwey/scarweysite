@@ -46,6 +46,11 @@ const ProductDetail: React.FC = () => {
   const [variantPrice, setVariantPrice] = useState<number>(0);
   const [showSizeError, setShowSizeError] = useState(false);
 
+  // Yakınlaştırma için yeni state'ler
+  const [isHovering, setIsHovering] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+
   const isInWishlist = product ? wishlistItems.some(item => item.id === product.id) : false;
 
   // Resim URL'ini düzgün formatla
@@ -107,6 +112,24 @@ const ProductDetail: React.FC = () => {
     
     // Variant fiyatını getir
     await fetchVariantPrice(variant.id);
+  };
+
+  // Fareyle resmin üzerine gelince yakınlaştırma
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setMousePosition({ x: e.clientX, y: e.clientY });
+    setImagePosition({ x, y });
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
   };
 
   // Güncellenmiş sepete ekleme
@@ -269,11 +292,16 @@ const ProductDetail: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
               {/* Ana resim */}
               <div className="relative mb-4 group">
-                <div className="relative overflow-hidden rounded-xl bg-gray-50 aspect-square">
+                <div 
+                  className="relative overflow-hidden rounded-xl bg-gray-50 aspect-square"
+                  onMouseMove={handleMouseMove}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
                   <img
                     src={images[selectedImage].imageUrl}
                     alt={images[selectedImage].altText || product.name}
-                    className={`w-full h-full object-contain transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in hover:scale-105'}`}
+                    className="w-full h-full object-contain transition-transform duration-300 cursor-zoom-in hover:scale-105"
                     onClick={() => setShowImageModal(true)}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/600x600?text=No+Image';
@@ -667,6 +695,49 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Yakınlaştırma Penceresi */}
+      {isHovering && (
+        <div 
+          className="fixed z-[9999] pointer-events-none"
+          style={{
+            left: Math.min(mousePosition.x + 25, window.innerWidth - 420),
+            top: Math.max(Math.min(mousePosition.y - 200, window.innerHeight - 420), 20),
+            width: '400px',
+            height: '400px'
+          }}
+        >
+          <div className="bg-white rounded-xl shadow-2xl border-4 border-orange-400 overflow-hidden relative">
+            <img
+              src={images[selectedImage].imageUrl}
+              alt="Yakınlaştırılmış görünüm"
+              className="w-full h-full object-cover"
+              style={{
+                transform: `scale(4) translate(${(50 - imagePosition.x) * 0.25}%, ${(50 - imagePosition.y) * 0.25}%)`,
+                transformOrigin: 'center center'
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://placehold.co/800x800?text=Yakınlaştırma+Mevcut+Değil';
+              }}
+            />
+            {/* Zoom indicator */}
+            <div className="absolute top-3 right-3 bg-black bg-opacity-80 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
+              4x Zoom
+            </div>
+          </div>
+          {/* Ok işareti */}
+          <div 
+            className="absolute -left-4 top-1/2 transform -translate-y-1/2"
+            style={{
+              width: 0,
+              height: 0,
+              borderTop: '15px solid transparent',
+              borderBottom: '15px solid transparent',
+              borderRight: '15px solid #fb923c'
+            }}
+          />
+        </div>
+      )}
 
       {/* Image Modal */}
       {showImageModal && (
