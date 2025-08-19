@@ -83,7 +83,7 @@ const Header: React.FC = () => {
     { 
       id: 'unisex', 
       name: 'Unisex', 
-      path: '/products?gender=Uniseks'
+      path: '/products?gender=Unisex'
     },
   ];
 
@@ -382,7 +382,7 @@ const Header: React.FC = () => {
                       {categories.map((category) => (
                         <Link
                           key={category.id}
-                          to={`/products?categoryId=${category.id}`}
+                          to={`/products?categoryIds=${category.id}`}
                           className="flex items-center px-6 py-3 text-sm text-gray-800 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:text-orange-600 transition-all duration-200 border-b border-gray-50 last:border-b-0 font-medium"
                         >
                           <span>{category.name}</span>

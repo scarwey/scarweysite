@@ -61,7 +61,7 @@ const Products: React.FC = () => {
     { value: '', label: 'Tüm Cinsiyetler' },
     { value: 'Erkek', label: 'Erkek' },
     { value: 'Kadın', label: 'Kadın' },
-    { value: 'Uniseks', label: 'Uniseks' },
+    { value: 'Unisex', label: 'Unisex' },
     { value: 'Çocuk', label: 'Çocuk' }
   ];
 
