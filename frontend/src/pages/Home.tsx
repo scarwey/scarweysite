@@ -495,10 +495,10 @@ const Home: React.FC = () => {
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   <div className="flex gap-6" style={{ width: `${Math.min(categories.length, 6) * 220}px` }}>
-                    {categories.slice(0, 6).map((category) => (
+                    {categories.map((category) => (
                       <Link
                         key={category.id}
-                        to={`/products?categoryId=${category.id}`}
+                        to={`/products?categoryIds=${category.id}`}
                         className="group block min-w-[200px]"
                       >
                         <div className="bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 group-hover:from-orange-200 group-hover:via-orange-300 group-hover:to-orange-400 border-2 border-orange-200 group-hover:border-orange-400 rounded-2xl md:rounded-3xl p-6 md:p-8 text-center transition-all duration-300 group-hover:shadow-xl min-h-[120px] md:min-h-[140px] flex items-center justify-center relative overflow-hidden">
