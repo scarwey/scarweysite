@@ -117,11 +117,15 @@ const ProductDetail: React.FC = () => {
   // Fareyle resmin üzerine gelince yakınlaştırma
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    
+    // X ve Y değerlerini 0-1 arasında sınırla
+    const clampedX = Math.max(0, Math.min(1, x));
+    const clampedY = Math.max(0, Math.min(1, y));
     
     setMousePosition({ x: e.clientX, y: e.clientY });
-    setImagePosition({ x, y });
+    setImagePosition({ x: clampedX * 100, y: clampedY * 100 });
   };
 
   const handleMouseEnter = () => {
@@ -301,12 +305,27 @@ const ProductDetail: React.FC = () => {
                   <img
                     src={images[selectedImage].imageUrl}
                     alt={images[selectedImage].altText || product.name}
-                    className="w-full h-full object-contain transition-transform duration-300 cursor-zoom-in hover:scale-105"
+                    className="w-full h-full object-contain transition-transform duration-300 cursor-crosshair"
                     onClick={() => setShowImageModal(true)}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/600x600?text=No+Image';
                     }}
                   />
+                  
+                  {/* Desktop Zoom Indicator */}
+                  <div className="hidden lg:block absolute inset-0 pointer-events-none">
+                    {isHovering && (
+                      <div 
+                        className="absolute border-2 border-orange-400 bg-orange-400 bg-opacity-20"
+                        style={{
+                          left: `${Math.max(0, Math.min(75, imagePosition.x - 12.5))}%`,
+                          top: `${Math.max(0, Math.min(75, imagePosition.y - 12.5))}%`,
+                          width: '25%',
+                          height: '25%'
+                        }}
+                      />
+                    )}
+                  </div>
                   
                   {/* Badges */}
                   <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -696,46 +715,40 @@ const ProductDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Yakınlaştırma Penceresi */}
+      {/* Desktop Yakınlaştırma Penceresi - Ana resimle aynı boyut */}
       {isHovering && (
         <div 
-          className="fixed z-[9999] pointer-events-none"
+          className="hidden lg:block fixed z-[9999] pointer-events-none"
           style={{
-            left: Math.min(mousePosition.x + 25, window.innerWidth - 420),
-            top: Math.max(Math.min(mousePosition.y - 200, window.innerHeight - 420), 20),
-            width: '400px',
-            height: '400px'
+            left: 'calc(50% + 30px)', // Ana resmin hemen yanında
+            top: '200px',              // Ana resimle aynı seviyede
+            width: '100%',             // Ana resim container'ı kadar
+            maxWidth: '500px',         // Maksimum genişlik
+            aspectRatio: '1'           // Kare oran
           }}
         >
-          <div className="bg-white rounded-xl shadow-2xl border-4 border-orange-400 overflow-hidden relative">
-            <img
-              src={images[selectedImage].imageUrl}
-              alt="Yakınlaştırılmış görünüm"
-              className="w-full h-full object-cover"
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-orange-400 overflow-hidden relative w-full h-full">
+            {/* Yakınlaştırılmış görsel - sadece fare altındaki alan */}
+            <div 
+              className="w-full h-full"
               style={{
-                transform: `scale(4) translate(${(50 - imagePosition.x) * 0.25}%, ${(50 - imagePosition.y) * 0.25}%)`,
-                transformOrigin: 'center center'
-              }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://placehold.co/800x800?text=Yakınlaştırma+Mevcut+Değil';
+                background: `url(${images[selectedImage].imageUrl}) no-repeat`,
+                backgroundSize: '300%', // 3x yakınlaştırma
+                backgroundPosition: `${imagePosition.x}% ${imagePosition.y}%`,
+                transition: 'background-position 0.1s ease-out'
               }}
             />
+            
             {/* Zoom indicator */}
-            <div className="absolute top-3 right-3 bg-black bg-opacity-80 text-white text-sm font-bold px-3 py-1.5 rounded-lg">
-              4x Zoom
+            <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white text-sm font-medium px-3 py-2 rounded-lg">
+              3x Yakınlaştırma
+            </div>
+            
+            {/* Alt bilgi */}
+            <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white text-xs px-3 py-2 rounded-lg">
+              Farenin altındaki alan
             </div>
           </div>
-          {/* Ok işareti */}
-          <div 
-            className="absolute -left-4 top-1/2 transform -translate-y-1/2"
-            style={{
-              width: 0,
-              height: 0,
-              borderTop: '15px solid transparent',
-              borderBottom: '15px solid transparent',
-              borderRight: '15px solid #fb923c'
-            }}
-          />
         </div>
       )}
 
