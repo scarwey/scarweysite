@@ -398,21 +398,15 @@ const ProductDetail: React.FC = () => {
 
           {/* Product Info - Sağ taraf */}
           <div className="lg:col-span-6">
-            <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
-              {/* Header section */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-4 sm:space-y-6">
+              {/* Header section - Mobil optimized */}
               <div>
                 {product.brand && (
                   <p className="text-orange-600 font-semibold text-sm uppercase tracking-wide mb-2">
                     {product.brand}
                   </p>
                 )}
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 leading-tight mb-4 break-words overflow-hidden" 
-                    style={{ 
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      maxHeight: '3rem'
-                    }}>
+                <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 leading-tight mb-3 break-words">
                   {product.name}
                 </h1>
               </div>
@@ -465,24 +459,24 @@ const ProductDetail: React.FC = () => {
                 </div>
               )}
 
-              {/* Price section */}
-              <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6">
+              {/* Price section - Mobil optimized */}
+              <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4">
                 {product.discountPrice ? (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
                         ₺{currentPrice.toFixed(2)}
                       </span>
-                      <span className="text-lg text-gray-400 line-through">
+                      <span className="text-sm sm:text-base md:text-lg text-gray-400 line-through">
                         ₺{product.price.toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-sm text-green-600 font-medium">
+                    <p className="text-xs sm:text-sm text-green-600 font-medium">
                       ₺{(product.price - currentPrice).toFixed(2)} tasarruf ediyorsunuz!
                     </p>
                   </div>
                 ) : (
-                  <span className="text-4xl font-bold text-gray-900">
+                  <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
                     ₺{currentPrice.toFixed(2)}
                   </span>
                 )}
@@ -533,8 +527,8 @@ const ProductDetail: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="text-sm text-gray-500">
-                    Toplam: <span className="font-bold text-lg text-gray-900">
+                  <div className="text-xs sm:text-sm text-gray-500">
+                    Toplam: <span className="font-bold text-sm sm:text-base md:text-lg text-gray-900">
                       ₺{(currentPrice * quantity).toFixed(2)}
                     </span>
                   </div>
