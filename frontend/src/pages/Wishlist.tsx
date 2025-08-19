@@ -129,7 +129,7 @@ const Wishlist: React.FC = () => {
                     to={`/products/${product.id}`}
                     className="flex-shrink-0 group"
                   >
-                    <div className="w-18 h-18 rounded-lg overflow-hidden bg-gray-100 group-hover:scale-105 transition-transform duration-200">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 group-hover:scale-105 transition-transform duration-200">
                       <img
                         src={getImageUrl(mainImage?.imageUrl)}
                         alt={product.name}
